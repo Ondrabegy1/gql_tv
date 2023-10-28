@@ -63,3 +63,29 @@ statements must be changed (see below or `GraphTypeDefinitions.eventGQLModel.py`
 def id(self) -> strawberry.ID:
     return self.id
 ```
+
+### conclusion
+
+The running GraphQL endpoint could be asked for query
+
+```gql
+{
+  eventById(id: "08ff1c5d-9891-41f6-a824-fc6272adc189") {
+    id
+  }
+}
+```
+
+This event is stored (among others) in `systemdata.json`.
+
+Appropriate response should be
+
+```json
+{
+  "data": {
+    "eventById": {
+      "id": "08ff1c5d-9891-41f6-a824-fc6272adc189"
+    }
+  }
+}
+```
