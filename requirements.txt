@@ -2,3 +2,5 @@ fastapi[all]
 uvicorn[standard]
 
 strawberry-graphql
+sqlalchemy
+asyncpg

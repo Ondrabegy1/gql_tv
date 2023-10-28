@@ -1,9 +1,29 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from strawberry.fastapi import GraphQLRouter
 
 from GraphTypeDefinitions import schema
 
-app = FastAPI()
+appcontext = {}
+@asynccontextmanager
+async def initEngine(app: FastAPI):
+
+    from DBDefinitions import startEngine, ComposeConnectionString
+
+    connectionstring = ComposeConnectionString()
+
+    asyncSessionMaker = await startEngine(
+        connectionstring=connectionstring,
+        makeDrop=True,
+        makeUp=True
+    )
+
+    appcontext["asyncSessionMaker"] = asyncSessionMaker
+    print("engine started", flush=True)
+    yield
+
+
+app = FastAPI(lifespan=initEngine)
 
 print("All initialization is done ")
 
