@@ -1,20 +1,25 @@
-## Step 2
-The source is extended with directory `GraphTypeDefinitions` which has one file `__init__.py`.
-Such structure is equivalent of `GraphTypeDefinitions.py` file. 
-In future other files can be added, in `__init__.py` imported and by such way extended functionality while code is splited into many files.
+## Step 3
+The `eventGQLModel.py` is added. It has class `EventGQLModel` which represents (unfinished) Event entity.
+Also there is function `event_by_id` which calls `EventGQLModel.resolve_reference` and creates the appropriate object in memory.
+In this case it is dictionary.
 
-`__init__.py` contains structures for "hello world" application on platform GraphQL.
-There is `Query` class which contains methods interpreted by strawberry library as possible queries.
-Such class is marked in schema construction as root of all queries.
-Schema is then used for `GraphQLRouter` instatiation (see main.py). The created object is connected to app (fastapi asgi).
+`EventGQLModel.resolve_reference` is the point where entity should be loaded from persistent storage (database?).
 
-When the program is run, it is possible to open url
+Notice method `EventGQLModel.id` which is attribute getter. It extracts `id` from the object (dictionary) `self["id"]`.
 
-`http://localhost:8000/gql`
+Function `event_by_id` is imported in `__init__.py` and linked as a method of class `Query`.
+By this way the GraphQL endpoint is extended.
 
-which serves interface for querying the GraphQL endpoint.
-You can try there the query
+When application is running, go to url
 
-`{
-  hello
-}`
+http://localhost:8000/gql
+
+and try the query
+
+`
+{
+  eventById(id: "1231321") {
+    id
+  }
+}
+`
