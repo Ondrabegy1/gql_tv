@@ -8,4 +8,4 @@ class EventModel(BaseModel):
     __tablename__ = "events"
 
     id = Column(Uuid, primary_key=True, comment="primary key", default=uuid)
-    name = Column(String)
+    name = Column(String, comment="name / label of the event")
