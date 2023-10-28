@@ -113,7 +113,7 @@ Primary key is **mandatory** value.
 It differs from creation so we need another input structure.
 
 There is also problem with concurrent work (multiple users).
-To avoid overwritting changed done by other user, the token must be used.
+To avoid overwritting changes done by other user, the token must be used.
 The token is retrieved from database and during update operation this token is checked.
 If the value is same as in database, the record has not been changed.
 Otherwise, the operation should not be finished as someone changed record meanwhile.
@@ -220,6 +220,17 @@ def createLoader(asyncSessionMaker, DBModel):
                     await session.commit()
                     result = rowToUpdate               
             return result
+```
+
+Do not forget to include this new mutation in `Mutation` class (file `GraphTypeDefinitions.__init__.py`).
+```python
+@strawberry.type(description="""Type for mutation root""")
+class Mutation:
+    from .eventGQLModel import event_insert
+    event_insert = event_insert
+
+    from .eventGQLModel import event_update
+    event_update = event_update
 ```
 
 ### conclusion
