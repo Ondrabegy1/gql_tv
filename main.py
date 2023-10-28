@@ -19,7 +19,13 @@ async def initEngine(app: FastAPI):
     )
 
     appcontext["asyncSessionMaker"] = asyncSessionMaker
+
     print("engine started", flush=True)
+
+    from utils.DBFeeder import initDB
+    await initDB(asyncSessionMaker)
+
+    print("data (if any) imported", flush=True)
     yield
 
 
@@ -31,5 +37,13 @@ print("All initialization is done ")
 def hello():
    return {'hello': 'world'}
 
-graphql_app = GraphQLRouter(schema)
+
+from utils.Dataloaders import createContextGetter
+get_context = createContextGetter(appcontext["asyncSessionMaker"])
+
+graphql_app = GraphQLRouter(
+    schema,
+    context_getter=createContextGetter(appcontext["asyncSessionMaker"])
+)
+
 app.include_router(graphql_app, prefix="/gql")

@@ -1,0 +1,76 @@
+{
+    "events": [
+        {
+            "id": "45b2df80-ae0f-11ed-9bd8-0242ac110002" , 
+            "name": "Zkouška", 
+            "name_en": "Exam", 
+            "eventtype_id": "b87d3ff0-8fd4-11ed-a6d4-0242ac110002",
+            
+            "startdate": "2023-04-19T08:00:00", 
+            "enddate": "2023-04-19T09:00:00",
+            "_chunk": 2
+        },
+        {
+            "id": "4dccf52f-4117-403c-932a-5691c0d020b1" , 
+            "name": "2021/22", 
+            "name_en": "2021/22", 
+            "eventtype_id": "a517c2fd-8dc7-4a2e-a107-cbdb88ba2aa5",
+            
+            "startdate": "2021-09-01T00:00:00", 
+            "enddate": "2022-09-01T00:00:00",
+            "_chunk": 0
+        },
+        {
+            "id": "5194663f-11aa-4775-91ed-5f3d79269fed" , 
+            "name": "2022/23", 
+            "name_en": "2022/23", 
+            "eventtype_id": "a517c2fd-8dc7-4a2e-a107-cbdb88ba2aa5",
+            
+            "startdate": "2022-09-01T00:00:00", 
+            "enddate": "2023-09-01T00:00:00",
+            "_chunk": 0
+        },
+        {
+            "id": "a64871f8-2308-48ff-adb2-33fb0b0741f1" , 
+            "name": "2023/24", 
+            "name_en": "2023/24", 
+            "eventtype_id": "a517c2fd-8dc7-4a2e-a107-cbdb88ba2aa5",
+            
+            "startdate": "2023-09-01T00:00:00", 
+            "enddate": "2024-09-01T00:00:00",
+            "_chunk": 0
+        },
+        {
+            "id": "9d05f000-7a9d-495d-9257-b597c5c6cb6a" , 
+            "name": "2024/25", 
+            "name_en": "2024/25", 
+            "eventtype_id": "a517c2fd-8dc7-4a2e-a107-cbdb88ba2aa5",
+            
+            "startdate": "2024-09-01T00:00:00", 
+            "enddate": "2025-09-01T00:00:00",
+            "_chunk": 0
+        },
+        {
+            "id": "08ff1c5d-9891-41f6-a824-fc6272adc189" , 
+            "name": "2022/23 ZS", 
+            "name_en": "2022/23 WS", 
+            "eventtype_id": "69ec2b0b-a39d-40df-9cea-e295b36749c9",
+            "masterevent_id": "5194663f-11aa-4775-91ed-5f3d79269fed",
+
+            "startdate": "2022-09-01T00:00:00", 
+            "enddate": "2023-03-01T00:00:00",
+            "_chunk": 1
+        },
+        {
+            "id": "0945ad17-3a36-4d33-b849-ad88144415ba" , 
+            "name": "2022/23 LS", 
+            "name_en": "2022/23 SS", 
+            "eventtype_id": "69ec2b0b-a39d-40df-9cea-e295b36749c9",
+            "masterevent_id": "5194663f-11aa-4775-91ed-5f3d79269fed",
+            
+            "startdate": "2023-03-01T00:00:00", 
+            "enddate": "2023-09-01T00:00:00",
+            "_chunk": 1
+        }
+    ]
+}

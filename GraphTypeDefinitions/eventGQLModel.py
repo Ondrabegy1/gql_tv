@@ -1,5 +1,6 @@
 import strawberry
 
+
 @strawberry.federation.type(
     keys=["id"],
     description="""Entity representing an object""",

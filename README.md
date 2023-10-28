@@ -1,68 +1,65 @@
-## Step 4
-The directory `DBDefinitions` has been added. 
-This directory contains code related to persistence models.
-As the ORM sqlalchemy is used.
+## Step 5
 
-In this step all code is in files 
-- `DBDefinitions.__init__.py`
-- `DBDefinitions.uuid.py`
-- `DBDefinitions.baseDBModel.py`
-- `DBDefinitions.eventDBModel.py`
+This step introduce a default data import and reading records from database.
 
-also `main.py` has been changed.
+### Default data loading
+Data import is encapsulated in file `utils.DBFeeder.py` (see function `initDB` there). 
+Imported data are stored in `systemdata.json`.
+As the type DateTime is stored in json as string, it must be decoded to avoid error messages.
+For this task `datetime_parser` function is used.
 
-It must solve this problems:
+There is also changed `main.py` file where `initDB` is called when application starts.
 
-### uuid
+### Query from database
 
-It is quite common to use uuid as a primary key for newly created databases. 
-It has many advantages in comparison to int primary keys.
-To cover usgae of uuid in this code there is `uuid.py` file with few self explaining lines.
-It also serves as a layer for future changes.
-
-### database structure definition
-
-SQLAlchemy needs a parent class for all models. 
-This has been fullfilled by declaration of `BaseModel` class in file `baseDBModel.py`.
-This class is imported in file `eventDBModel.py`. 
-There is also defined class `EventModel` which is inherited from `BaseModel`.
-
-Attribute `EventModel.__tablename__` contains table name used (and created) in database.
-Other class attributes (`EventModel.id` and `EventModel.name`) repesents attributes of table records.
-
-Structure is prepared for large databases. 
-It is expected that all tables and its appropriate models are defined in separate files.
-
-### database connection
-
-Database connection is defined by connection string. 
-This is very common for most programming languages.
-Connection string contains type od connection (driver), hostname, port, username, password and database name.
-You should look at `ComposeConnectionString` function in `__init__.py`.
-This function tries to get connection string parts from environment variables.
-If environment variables are not defined, there are default values.
-
-In `__init__.py` is defined function `startEngine` which returns asynchronous session maker.
-This should be used for sending statements to database server.
-
-For experiments postgres database is recommended (and connection string is designed for this).
-Postgres can be instaled as docker image see https://hub.docker.com/_/postgres .
-**Be sure that instalation has appropriate database installed (created).**
-For postgres management pgadmin can works well, see https://hub.docker.com/r/dpage/pgadmin4 .
-Do not forget map ports so they will be available for localhost (postgres has 5432).
-
-### application init
-
-`main.py` inits FastAPI in way where `initEngine` is executed at application start.
-It has been made to recreate related database structure (database table `events`).
-This database table is dropped and created on each application start.
-This leads to always empty `events` table.
-
-### conclusion
-After run of application throught pgadmin state of database can be checked.
-
-The GraphQL endpoint is still available at
-http://localhost:8000/gql
+For this step only operation **R** (from CRUD) has been chosen.
+Reading from database table is implemented in general way in `utils.Dataloaders` with function `load`.
 
 
-but the endpoint does not offer new functionality.
+```python
+async def load(id):
+    async with asyncSessionMaker() as session:
+        statement = select(DBModel).filter_by(id=id)
+        rows = await session.execute(statement)
+        rows = rows.scalars()
+        row = next(rows, None)
+        return row
+```
+
+Function `load` takes `DBModel` and `asyncSessionMaker` variables from context where function has been created. In this particular case it is `createLoader` function.
+
+### Passing session maker to consumers
+
+`EventGQLModel` class with its class method `resolve_reference` is responsible for instatiation of memory variable filled with appropriate values taken from database table.
+Question is how we will pass the session maker to this point so this function can communicate with database. 
+For such task context is appropriate space.
+There is already initialized engine (see `main.py`) stored in `appcontext["asyncSessionMaker"]`.
+
+Strawberry supports passing context variables by `context_getter` parameter.
+This parameter is filled with value `get_context` which is function (see below) creating loaders.
+
+Compare code
+```python
+def createContextGetter(asyncSessionMaker):
+    async def get_context():
+        return {
+            "loaders": createLoaders(asyncSessionMaker)
+        }        
+    return get_context
+```
+
+with 
+
+```python
+async def get_context():
+    asyncSessionMaker = appcontext["asyncSessionMaker"]
+    return {
+        "loaders": createLoaders(asyncSessionMaker)
+    }
+
+```
+
+Second one is simple function which use stored value in dictionary.
+First one is function returning a function. 
+In this case value is as parameter of encapulating function.
+See closure (https://www.geeksforgeeks.org/python-closures).
