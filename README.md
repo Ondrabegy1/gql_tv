@@ -1,105 +1,92 @@
-## Step 5
+## Step 6
 
-This step introduce a default data import and reading records from database.
+This step will extend DBModel and GQLModel.
 
-### Default data loading
-Data import is encapsulated in file `utils.DBFeeder.py` (see function `initDB` there). 
-Imported data are stored in `systemdata.json`.
-As the type DateTime is stored in json as string, it must be decoded to avoid error messages.
-For this task `datetime_parser` function is used.
+### DBModel
 
-There is also changed `main.py` file where `initDB` is called when application starts.
-
-### Query from database
-
-For this step only operation **R** (from CRUD) has been chosen.
-Reading from database table is implemented in general way in `utils.Dataloaders` with function `load`.
-
+There is `EventGQLModel` which represents an event.
+It is possible to store in database only primary key (id) and name of the event.
+But events have their starts and ends. 
+This should be enabled by addition of other attributes.
 
 ```python
-async def load(id):
-    async with asyncSessionMaker() as session:
-        statement = select(DBModel).filter_by(id=id)
-        rows = await session.execute(statement)
-        rows = rows.scalars()
-        row = next(rows, None)
-        return row
+class EventModel(BaseModel):
+    __tablename__ = "events"
+
+    id = Column(Uuid, primary_key=True, comment="primary key", default=uuid)
+    name = Column(String, comment="name / label of the event")
+
+    startdate = Column(DateTime, comment="when the event should start")
+    enddate = Column(DateTime, comment="when the event should end")
 ```
 
-Function `load` takes `DBModel` and `asyncSessionMaker` variables from context where function has been created. In this particular case it is `createLoader` function.
+Other relevant code should adapt this change
 
-### Passing session maker to consumers
+### GQLModel
 
-`EventGQLModel` class with its class method `resolve_reference` is responsible for instatiation of memory variable filled with appropriate values taken from database table.
-Question is how we will pass the session maker to this point so this function can communicate with database. 
-For such task context is appropriate space.
-There is already initialized engine (see `main.py`) stored in `appcontext["asyncSessionMaker"]`.
-
-Strawberry supports passing context variables by `context_getter` parameter.
-This parameter is filled with value `get_context` which is function (see below) creating loaders.
+If we want (and we should) to allow reading from database, we have to refactor `EventGQLModel`. 
 
 ```python
-def get_context():
-    from utils.Dataloaders import createLoadersContext
-    return createLoadersContext(appcontext["asyncSessionMaker"])
-```
+@strawberry.federation.type(
+    keys=["id"],
+    description="""Entity representing an object""",
+)
+class EventGQLModel:
+    @classmethod
+    async def resolve_reference(cls, info: strawberry.types.Info, id: strawberry.ID):
+        if id is None: 
+            return None
 
-```python
-async def createLoadersContext(asyncSessionMaker):
-    return {
-        "loaders": createLoaders(asyncSessionMaker)
-    }
-```
+        loaders = getLoadersFromInfo(info)
+        eventloader = loaders.events
+        result = await eventloader.load(id=id)
 
-In strawberry created context is part of info which should be parameter for methods. As the info is passed, it is possible to retrieve loader.
+        return result
 
-```python
-def getLoadersFromInfo(info):
-    context = info.context
-    loaders = context["loaders"]
-    return loaders
-```
+    @strawberry.field(description="""Primary key""")
+    def id(self) -> strawberry.ID:
+        return self.id
 
-Functions `createLoadersContext` and `getLoadersFromInfo` are like sisters.
-Having them implemented at same site (file) is quite handy.
+    @strawberry.field(description="""Name / label of the event""")
+    def name(self) -> strawberry.ID:
+        return self.name
 
-### query for attribute value
+    @strawberry.field(description="""Moment when the event starts""")
+    def startdate(self) -> datetime.datetime:
+        return self.startdate
 
-In this step we use SQLAlchemy models for extracting data from database.
-Extracted data are classes not dictionaries, thus appropriate
-statements must be changed (see below or `GraphTypeDefinitions.eventGQLModel.py`)
-
-```python
-@strawberry.field(description="""Primary key""")
-def id(self) -> strawberry.ID:
-    return self.id
+    @strawberry.field(description="""Moment when the event ends""")
+    def enddate(self) -> datetime.datetime:
+        return self.enddate
 ```
 
 ### conclusion
 
-The running GraphQL endpoint could be asked for query
+Now we can query GraphQL endpoint for all implemented attributes.
 
+You can open endpoint at 
+http://locahost:8000/gql and put query
 ```gql
 {
   eventById(id: "08ff1c5d-9891-41f6-a824-fc6272adc189") {
     id
+    name
+    startdate
+    enddate
   }
 }
 ```
 
-This event is stored (among others) in `systemdata.json`.
-
-Appropriate response should be
-
-```json
+The response should be 
+```gql
 {
   "data": {
     "eventById": {
-      "id": "08ff1c5d-9891-41f6-a824-fc6272adc189"
+      "id": "08ff1c5d-9891-41f6-a824-fc6272adc189",
+      "name": "2022/23 ZS",
+      "startdate": "2022-09-01T00:00:00",
+      "enddate": "2023-03-01T00:00:00"
     }
   }
 }
 ```
-
-This step introduced full connection with database and default database content. 
-GraphQL endpoint now on query retrieves data from database.

@@ -1,4 +1,5 @@
 import strawberry
+import datetime
 
 from utils.Dataloaders import getLoadersFromInfo
 
@@ -21,6 +22,18 @@ class EventGQLModel:
     @strawberry.field(description="""Primary key""")
     def id(self) -> strawberry.ID:
         return self.id
+
+    @strawberry.field(description="""Name / label of the event""")
+    def name(self) -> strawberry.ID:
+        return self.name
+
+    @strawberry.field(description="""Moment when the event starts""")
+    def startdate(self) -> datetime.datetime:
+        return self.startdate
+
+    @strawberry.field(description="""Moment when the event ends""")
+    def enddate(self) -> datetime.datetime:
+        return self.enddate
 
 
 @strawberry.field(description="""returns and event""")
