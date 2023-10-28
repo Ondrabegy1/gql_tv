@@ -23,7 +23,7 @@ class EventModel(BaseModel):
 
 ```
 
-Because `masterevent_id` is marked as foreign key, database server will test if value here as link to existing event (primary key value).
+Because `masterevent_id` is marked as foreign key, database server will test if value here points to existing event (primary key value), if there is event with `id` == `masterevent_id`
 Check `systemdata.json`, there is key named `_chunk`. 
 Its value allows to control multistage initialization of table (in this case table `events`) to avoid database error. 
 
@@ -42,12 +42,14 @@ Its value allows to control multistage initialization of table (in this case tab
             "_chunk": 2
         },
     ...
+    ]
+}
 ```
 
 ### GQLModel
 
 Related GQL entity is `EventGQLModel`. 
-We want to add here new method `master_event`
+We want to add here new method `master_event`. This method should return an `EventGQLModel` which has appropriate `id`.
 
 ```python
 @strawberry.federation.type(
@@ -93,6 +95,8 @@ class EventGQLModel:
 ```
 
 It is also expected to read all subevents.
+In this case we want to retrieve `List` of `EventGQLModel` from database.
+All items must have `masterevent_id` equal to current event id.
 
 
 ```python
