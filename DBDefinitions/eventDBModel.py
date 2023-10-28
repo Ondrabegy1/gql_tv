@@ -1,5 +1,5 @@
 from sqlalchemy.schema import Column
-from sqlalchemy import Uuid, String, DateTime
+from sqlalchemy import Uuid, String, DateTime, ForeignKey
 
 from .baseDBModel import BaseModel
 from .uuid import uuid
@@ -12,3 +12,7 @@ class EventModel(BaseModel):
 
     startdate = Column(DateTime, comment="when the event should start")
     enddate = Column(DateTime, comment="when the event should end")
+
+    masterevent_id = Column(
+        ForeignKey("events.id"), index=True, nullable=True,
+        comment="event which owns this event")

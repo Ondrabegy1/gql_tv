@@ -4,14 +4,23 @@ from functools import cache
 from DBDefinitions.eventDBModel import EventModel
 
 def createLoader(asyncSessionMaker, DBModel):
+    baseStatement = select(DBModel)
     class Loader:
         async def load(self, id):
             async with asyncSessionMaker() as session:
-                statement = select(DBModel).filter_by(id=id)
+                statement = baseStatement.filter_by(id=id)
                 rows = await session.execute(statement)
                 rows = rows.scalars()
                 row = next(rows, None)
                 return row
+        
+        async def filter_by(self, **kwargs):
+            async with asyncSessionMaker() as session:
+                statement = baseStatement.filter_by(**kwargs)
+                rows = await session.execute(statement)
+                rows = rows.scalars()
+                return rows
+
             
     return Loader()
 

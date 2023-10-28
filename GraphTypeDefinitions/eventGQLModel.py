@@ -1,5 +1,7 @@
+import uuid
 import strawberry
 import datetime
+import typing
 
 from utils.Dataloaders import getLoadersFromInfo
 
@@ -34,6 +36,21 @@ class EventGQLModel:
     @strawberry.field(description="""Moment when the event ends""")
     def enddate(self) -> datetime.datetime:
         return self.enddate
+
+    @strawberry.field(description="""event which contains this event (aka semester of this lesson)""")
+    async def master_event(self, info: strawberry.types.Info) -> typing.Union["EventGQLModel", None]:
+        if (self.masterevent_id is None):
+            result = None
+        else:
+            result = await EventGQLModel.resolve_reference(info=info, id=self.masterevent_id)
+        return result
+
+    @strawberry.field(description="""events which are contained by this event (aka all lessons for the semester)""")
+    async def sub_events(self, info: strawberry.types.Info) -> typing.List["EventGQLModel"]:
+        loaders = getLoadersFromInfo(info)
+        eventloader = loaders.events
+        result = await eventloader.filter_by(masterevent_id=self.id)
+        return result
 
 
 @strawberry.field(description="""returns and event""")
