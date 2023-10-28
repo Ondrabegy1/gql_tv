@@ -4,11 +4,11 @@ This code is stored with is step by step evolution.
 We are going from scratch to full GraphQL (federated) endpoint.
 
 ## Technology
-FastAPI
-Strawberry
-SQLAlchemy
-Asyncio
-AsyncDataLoader
+- FastAPI
+- Strawberry
+- SQLAlchemy
+- Asyncio
+- AsyncDataLoader
 
 ## Initialization
 At begin it is stongly recomended to create virtual environment and install all libraries from requirements.txt file.
