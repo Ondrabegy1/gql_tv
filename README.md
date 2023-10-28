@@ -38,28 +38,28 @@ There is already initialized engine (see `main.py`) stored in `appcontext["async
 Strawberry supports passing context variables by `context_getter` parameter.
 This parameter is filled with value `get_context` which is function (see below) creating loaders.
 
-Compare code
 ```python
-def createContextGetter(asyncSessionMaker):
-    async def get_context():
-        return {
-            "loaders": createLoaders(asyncSessionMaker)
-        }        
-    return get_context
+def get_context():
+    from utils.Dataloaders import createLoadersContext
+    return createLoadersContext(appcontext["asyncSessionMaker"])
 ```
 
-with 
-
 ```python
-async def get_context():
-    asyncSessionMaker = appcontext["asyncSessionMaker"]
+async def createLoadersContext(asyncSessionMaker):
     return {
         "loaders": createLoaders(asyncSessionMaker)
     }
-
 ```
 
-Second one is simple function which use stored value in dictionary.
-First one is function returning a function. 
-In this case value is as parameter of encapulating function.
-See closure (https://www.geeksforgeeks.org/python-closures).
+
+### query for attribute value
+
+In this step we use SQLAlchemy models for extracting data from database.
+Extracted data are classes not dictionaries, thus appropriate
+statements must be changed (see below or `GraphTypeDefinitions.eventGQLModel.py`)
+
+```python
+@strawberry.field(description="""Primary key""")
+def id(self) -> strawberry.ID:
+    return self.id
+```

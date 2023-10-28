@@ -38,12 +38,13 @@ def hello():
    return {'hello': 'world'}
 
 
-from utils.Dataloaders import createContextGetter
-get_context = createContextGetter(appcontext["asyncSessionMaker"])
+def get_context():
+    from utils.Dataloaders import createLoadersContext
+    return createLoadersContext(appcontext["asyncSessionMaker"])
 
 graphql_app = GraphQLRouter(
     schema,
-    context_getter=createContextGetter(appcontext["asyncSessionMaker"])
+    context_getter=get_context
 )
 
 app.include_router(graphql_app, prefix="/gql")

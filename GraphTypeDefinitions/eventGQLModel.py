@@ -1,5 +1,6 @@
 import strawberry
 
+from utils.Dataloaders import getLoadersFromInfo
 
 @strawberry.federation.type(
     keys=["id"],
@@ -11,13 +12,15 @@ class EventGQLModel:
         if id is None: 
             return None
 
-        result = {"id": id}
+        loaders = getLoadersFromInfo(info)
+        eventloader = loaders.events
+        result = await eventloader.load(id=id)
 
         return result
 
     @strawberry.field(description="""Primary key""")
     def id(self) -> strawberry.ID:
-        return self["id"]
+        return self.id
 
 
 @strawberry.field(description="""returns and event""")

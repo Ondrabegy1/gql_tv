@@ -5,7 +5,7 @@ from DBDefinitions.eventDBModel import EventModel
 
 def createLoader(asyncSessionMaker, DBModel):
     class Loader:
-        async def load(id):
+        async def load(self, id):
             async with asyncSessionMaker() as session:
                 statement = select(DBModel).filter_by(id=id)
                 rows = await session.execute(statement)
@@ -25,9 +25,12 @@ def createLoaders(asyncSessionMaker):
     return Loaders()
 
 
-def createContextGetter(asyncSessionMaker):
-    async def get_context():
-        return {
-            "loaders": createLoaders(asyncSessionMaker)
-        }        
-    return get_context
+def createLoadersContext(asyncSessionMaker):
+    return {
+        "loaders": createLoaders(asyncSessionMaker)
+    }
+
+def getLoadersFromInfo(info):
+    context = info.context
+    loaders = context["loaders"]
+    return loaders
