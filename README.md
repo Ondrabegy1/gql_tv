@@ -51,6 +51,17 @@ async def createLoadersContext(asyncSessionMaker):
     }
 ```
 
+In strawberry created context is part of info which should be parameter for methods. As the info is passed, it is possible to retrieve loader.
+
+```python
+def getLoadersFromInfo(info):
+    context = info.context
+    loaders = context["loaders"]
+    return loaders
+```
+
+Functions `createLoadersContext` and `getLoadersFromInfo` are like sisters.
+Having them implemented at same site (file) is quite handy.
 
 ### query for attribute value
 
