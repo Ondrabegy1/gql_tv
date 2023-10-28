@@ -15,6 +15,15 @@ class Query:
     from .eventGQLModel import event_by_id
     event_by_id = event_by_id
 
+@strawberry.type(description="""Type for mutation root""")
+class Mutation:
+    from .eventGQLModel import event_insert
+    event_insert = event_insert
+
+    from .eventGQLModel import event_update
+    event_update = event_update
+
 schema = strawberry.federation.Schema(
-    query=Query
+    query=Query,
+    mutation=Mutation
 )

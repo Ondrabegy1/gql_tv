@@ -1,13 +1,127 @@
-## Step 7
+## Step 8
 
-This step will introduce entity relations.
+This step will introduce **C** and **U** operations (from CRUD).
 
-### DBModel
+### Create
 
-There is `EventGQLModel` which represents an event.
-We want to extend this model with possibility to define a master event (school years, semesters, ...). 
-The relation between master event and sub events could be defined by foreign key.
-Notice last attribute in `EventModel` class below.
+To create a new `EventGQLModel` and / or `EventModel` (in database) the incomming request should contain event definition.
+For this a class must be added (file `DBDefinitions.eventDBModel`).
+
+```python
+@strawberry.input(description="definition of event used for creation")
+class EventInsertGQLModel:
+    name: str = strawberry.field(description="name / label of event")
+    id: typing.Optional[strawberry.ID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
+    masterevent_id: typing.Optional[strawberry.ID] = strawberry.field(description="ID of master event", default=None)
+    startdate: typing.Optional[datetime.datetime] = strawberry.field(description="moment when event starts", default_factory=lambda: datetime.datetime.now())
+    enddate: typing.Optional[datetime.datetime] = strawberry.field(description="moment when event ends", default_factory=lambda: datetime.datetime.now() + datetime.timedelta(minutes = 30))
+
+```
+
+This structure is just a GraphQL (we are using strawberry) input parameter.
+This paramater will be used in function which will create a new database record.
+GraphQL has named such functions as **mutations**.
+
+When a change has been done, the client should get response containing a message that operation has been finished or failed. Thus we need an extra structure for this result.
+
+```python
+@strawberry.type(description="result of CUD operation on event")
+class EventResultGQLModel:
+    id: typing.Optional[strawberry.ID] = None
+    msg: str = strawberry.field(description="result of the operation ok / fail", default="")
+
+    @strawberry.field(description="""returns the event""")
+    async def event(self, info: strawberry.types.Info) -> EventGQLModel:
+        return await EventGQLModel.resolve_reference(info, self.id)
+
+```
+
+Now we can define a function for mutation.
+
+```python
+@strawberry.mutation(description="write a new event into database")
+async def event_insert(self, info: strawberry.types.Info, event: EventInsertGQLModel) -> EventResultGQLModel:
+    loader = getLoadersFromInfo(info).events
+    row = await loader.insert(event)
+    result = EventResultGQLModel()
+    result.msg = "ok"
+    result.id = row.id
+    return result
+```
+
+Class `Loader` miss the method `insert`, so we must extend it. See file `utils.Dataloaders.py`
+```python
+def createLoader(asyncSessionMaker, DBModel):
+    baseStatement = select(DBModel)
+    class Loader:
+        ...
+        async def insert(self, entity, extra={}):
+            newdbrow = DBModel()
+            newdbrow = update(newdbrow, entity, extra)
+            async with asyncSessionMaker() as session:
+                session.add(newdbrow)
+                await session.commit()
+            return newdbrow
+```
+
+Notice call of function `update`. 
+This is function which can transfer attributes from entity (strawberry input type) to DBModel. 
+There is also `extra` parameter which allows to ovewrite some attributes.
+
+```python
+def update(destination, source=None, extraValues={}):
+    """Updates destination's attributes with source's attributes.
+    Attributes with value None are not updated."""
+    if source is not None:
+        for name in dir(source):
+            if name.startswith("_"):
+                continue
+            value = getattr(source, name)
+            if value is not None:
+                setattr(destination, name, value)
+
+    for name, value in extraValues.items():
+        setattr(destination, name, value)
+
+    return destination
+```
+
+All mutations are encapsulated into single type and exposed as part of schema
+`Mutation` class from file `GraphTypeDefinitions.__init__.py`
+```python
+@strawberry.type(description="""Type for mutation root""")
+class Mutation:
+    from .eventGQLModel import event_insert
+    event_insert = event_insert
+```
+
+Schema creation should be changed (see `GraphTypeDefinitions.__init__.py` file):
+```python
+schema = strawberry.federation.Schema(
+    query=Query,
+    mutation=Mutation
+)
+```
+
+### update
+
+Update is another operation on `EventGQLModel` (`EventModel`). 
+Result of this operation must change database.
+For this operation we must know primary key value.
+It identifies entity which is object of this operation.
+Primary key is **mandatory** value.
+It differs from creation so we need another input structure.
+
+There is also problem with concurrent work (multiple users).
+To avoid overwritting changed done by other user, the token must be used.
+The token is retrieved from database and during update operation this token is checked.
+If the value is same as in database, the record has not been changed.
+Otherwise, the operation should not be finished as someone changed record meanwhile.
+
+Such token can be easily implemented by timestamp.
+This means that `EventModel` must be extended.
+`lastchange` is new attribute which is generated at client side.
+Try to find serverside solution.
 
 ```python
 class EventModel(BaseModel):
@@ -19,184 +133,194 @@ class EventModel(BaseModel):
     startdate = Column(DateTime, comment="when the event should start")
     enddate = Column(DateTime, comment="when the event should end")
 
-    masterevent_id = Column(ForeignKey("events.id"), index=True, nullable=True)
+    masterevent_id = Column(
+        ForeignKey("events.id"), index=True, nullable=True,
+        comment="event which owns this event")
 
+    lastchange = Column(DateTime, default=datetime.datetime.now)
 ```
 
-Because `masterevent_id` is marked as foreign key, database server will test if value here points to existing event (primary key value), if there is event with `id` == `masterevent_id`
-Check `systemdata.json`, there is key named `_chunk`. 
-Its value allows to control multistage initialization of table (in this case table `events`) to avoid database error. 
-
-
-```json
-{
-    "events": [
-        {
-            "id": "45b2df80-ae0f-11ed-9bd8-0242ac110002" , 
-            "name": "Zkouška", 
-            "name_en": "Exam", 
-            "eventtype_id": "b87d3ff0-8fd4-11ed-a6d4-0242ac110002",
-            
-            "startdate": "2023-04-19T08:00:00", 
-            "enddate": "2023-04-19T09:00:00",
-            "_chunk": 2
-        },
-    ...
-    ]
-}
-```
-
-### GQLModel
-
-Related GQL entity is `EventGQLModel`. 
-We want to add here new method `master_event`. This method should return an `EventGQLModel` which has appropriate `id`.
+To get value of `lastchange` new attribute to `EventGQLModel` must be added
 
 ```python
-@strawberry.federation.type(
-    keys=["id"],
-    description="""Entity representing an object""",
-)
-class EventGQLModel:
-    @classmethod
-    async def resolve_reference(cls, info: strawberry.types.Info, id: strawberry.ID):
-        if id is None: 
-            return None
-
-        loaders = getLoadersFromInfo(info)
-        eventloader = loaders.events
-        result = await eventloader.load(id=id)
-
-        return result
-
-    @strawberry.field(description="""Primary key""")
-    def id(self) -> strawberry.ID:
-        return self.id
-
-    @strawberry.field(description="""Name / label of the event""")
-    def name(self) -> strawberry.ID:
-        return self.name
-
-    @strawberry.field(description="""Moment when the event starts""")
-    def startdate(self) -> datetime.datetime:
-        return self.startdate
-
-    @strawberry.field(description="""Moment when the event ends""")
-    def enddate(self) -> datetime.datetime:
-        return self.enddate
-
-    @strawberry.field(description="""event which contains this event (aka semester of this lesson)""")
-    async def master_event(self, info: strawberry.types.Info) -> typing.Union["EventGQLModel", None]:
-        if (self.masterevent_id is None):
-            result = None
-        else:
-            result = await EventGQLModel.resolve_reference(info=info, id=self.masterevent_id)
-        return result
-
+    @strawberry.field(description="""Timestamp / token""")
+    def lastchange(self) -> typing.Optional[datetime.datetime]:
+        return self.lastchange
 ```
 
-It is also expected to read all subevents.
-In this case we want to retrieve `List` of `EventGQLModel` from database.
-All items must have `masterevent_id` equal to current event id.
-
+At this stage it is possible to introduce data structure describing update operation.
 
 ```python
-@strawberry.federation.type(
-    keys=["id"],
-    description="""Entity representing an object""",
-)
-class EventGQLModel:
+@strawberry.input(description="definition of event used for update")
+class EventUpdateGQLModel:
+    id: strawberry.ID = strawberry.field(description="primary key (UUID), identifies object of operation")
+    lastchange: datetime.datetime = strawberry.field(description="timestamp / token for multiuser updates")
+    name: typing.Optional[str] = strawberry.field(description="name / label of event", default=None)
+    masterevent_id: typing.Optional[strawberry.ID] = strawberry.field(description="ID of master event", default=None)
+    startdate: typing.Optional[datetime.datetime] = strawberry.field(description="moment when event starts", default=None)
+    enddate: typing.Optional[datetime.datetime] = strawberry.field(description="moment when event ends", default=None)
 
-    ...
-
-    @strawberry.field(description="""events which are contained by this event (aka all lessons for the semester)""")
-    async def sub_events(self, info: strawberry.types.Info, startdate: datetime.datetime, enddate: datetime.datetime) -> typing.List["EventGQLModel"]:
-        loaders = getLoadersFromInfo(info)
-        eventloader = loaders.events
-        #TODO
-        result = await eventloader.filter_by(masterevent_id=self.id)
-        return result
 ```
 
-Loader still does not support method `filter_by`. This must be implemented in file `utils.Dataloaders`.
-The `createLoader` function there has now definition below.
+Result of update operation can be same as for operation insert (create).
+Now we need new mutation `event_update` 
+
+```python
+@strawberry.mutation(description="update the event in database")
+async def event_update(self, info: strawberry.types.Info, event: EventUpdateGQLModel) -> EventResultGQLModel:
+    loader = getLoadersFromInfo(info).events
+    row = await loader.update(event)
+    result = EventResultGQLModel()
+    result.id = event.id
+    if row is None:
+        result.msg = "fail"
+    else:    
+        result.msg = "ok"
+    return result
+```
+
+We miss method `update` on loader (defined in file `utils.Dataloaders.py`).
+Notice the test of opration's result.
+If it is `None`, operation failed as timestamp was not different.
+
+There must be loaded entity from database, if it does not exists, the operation failed (bad value of primary key).
+If there is attribute `lastchange`, it has timestamp.
+This timestamp must the updater know.
+If the value is different, someone overwritten record. 
+Operation failed.
+If all checks have passed, the update can be performed.
+Also timestamp must be changed to protect unwanted changes (new token).
+
 
 ```python
 def createLoader(asyncSessionMaker, DBModel):
     baseStatement = select(DBModel)
     class Loader:
-        async def load(self, id):
+        ...
+        async def update(self, entity, extraValues={}):
             async with asyncSessionMaker() as session:
-                statement = baseStatement.filter_by(id=id)
+                statement = baseStatement.filter_by(id=entity.id)
                 rows = await session.execute(statement)
                 rows = rows.scalars()
-                row = next(rows, None)
-                return row
-        
-        async def filter_by(self, **kwargs):
-            async with asyncSessionMaker() as session:
-                statement = baseStatement.filter_by(**kwargs)
-                rows = await session.execute(statement)
-                rows = rows.scalars()
-                return rows
+                rowToUpdate = next(rows, None)
+
+                if rowToUpdate is None:
+                    return None
+
+                dochecks = hasattr(rowToUpdate, 'lastchange')             
+                checkpassed = True  
+                if (dochecks):
+                    if (entity.lastchange != rowToUpdate.lastchange):
+                        result = None
+                        checkpassed = False                        
+                    else:
+                        entity.lastchange = datetime.datetime.now()
+                if checkpassed:
+                    rowToUpdate = update(rowToUpdate, entity, extraValues=extraValues)
+                    await session.commit()
+                    result = rowToUpdate               
+            return result
 ```
-`**kwargs` argument (parameter) represent any structure of named values.
-This perfectly fits our needs.
 
 ### conclusion
 
-GraphQL endpoint has been exteded with simple relations.
+From now, if the code is running, it is possible to open
+http://localhost:8000/gql
 
-You can open endpoint at 
-http://locahost:8000/gql and put query
+and send mutation
+
 ```gql
-{
-  eventById(id: "08ff1c5d-9891-41f6-a824-fc6272adc189") {
+mutation {
+  eventInsert(
+    event: {id: "bbedf480-3e1d-435c-b994-1a4991e0b87b", name: "new event"}
+  ) {
+    msg
     id
-    name
-    startdate
-    enddate
-    
-    masterEvent {
+    event {
       id
       name
-      subEvents {
-        id
-        name
-      }
-    }
-    
-    subEvents {
-      id
-      name
+      lastchange
     }
   }
 }
 ```
 
-The response should be 
+Response should be
 ```gql
 {
   "data": {
-    "eventById": {
-      "id": "08ff1c5d-9891-41f6-a824-fc6272adc189",
-      "name": "2022/23 ZS",
-      "startdate": "2022-09-01T00:00:00",
-      "enddate": "2023-03-01T00:00:00",
-      "masterEvent": {
-        "id": "5194663f-11aa-4775-91ed-5f3d79269fed",
-        "name": "2022/23",
-        "subEvents": [
-          {
-            "id": "08ff1c5d-9891-41f6-a824-fc6272adc189",
-            "name": "2022/23 ZS"
-          },
-          {
-            "id": "0945ad17-3a36-4d33-b849-ad88144415ba",
-            "name": "2022/23 LS"
-          }
-        ]
-      },
-      "subEvents": []
+    "eventInsert": {
+      "msg": "ok",
+      "id": "bbedf480-3e1d-435c-b994-1a4991e0b87b",
+      "event": {
+        "id": "bbedf480-3e1d-435c-b994-1a4991e0b87b",
+        "name": "new event",
+        "lastchange": "2023-10-28T21:48:15.138121"
+      }
+    }
+  }
+}
+```
+
+Notice that we enforce primary key value. If you post this mutation second time, database would throw an error
+
+Response for second (same) mutation:
+
+```gql
+{
+  "data": null,
+  "errors": [
+    {
+      "message": "(sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint \"events_pkey\"\nDETAIL:  Key (id)=(bbedf480-3e1d-435c-b994-1a4991e0b87b) already exists.\n[SQL: INSERT INTO events (id, name, startdate, enddate, masterevent_id, lastchange) VALUES ($1::UUID, $2::VARCHAR, $3::TIMESTAMP WITHOUT TIME ZONE, $4::TIMESTAMP WITHOUT TIME ZONE, $5::UUID, $6::TIMESTAMP WITHOUT TIME ZONE)]\n[parameters: ('bbedf480-3e1d-435c-b994-1a4991e0b87b', 'new event', datetime.datetime(2023, 10, 28, 21, 46, 59, 296182), datetime.datetime(2023, 10, 28, 22, 16, 59, 296182), None, datetime.datetime(2023, 10, 28, 21, 48, 45, 57987))]\n(Background on this error at: https://sqlalche.me/e/20/gkpj)",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "eventInsert"
+      ]
+    }
+  ]
+}
+```
+
+It is possible to change name of the newly created event.
+**The `lastchange` must be set to proper value.**
+
+```gql
+mutation {
+  eventUpdate(
+    event: {
+      id: "bbedf480-3e1d-435c-b994-1a4991e0b87b", 
+      lastchange: "2023-10-28 21:48:15.138121", 
+      name: "new event X"
+    }
+  ) {
+    msg
+    id
+    event {
+      id
+      name
+      lastchange
+    }
+  }
+}
+```
+
+Response should look like
+```json
+{
+  "data": {
+    "eventUpdate": {
+      "msg": "ok",
+      "id": "bbedf480-3e1d-435c-b994-1a4991e0b87b",
+      "event": {
+        "id": "bbedf480-3e1d-435c-b994-1a4991e0b87b",
+        "name": "new event X",
+        "lastchange": "2023-10-28T21:50:16.663328"
+      }
     }
   }
 }

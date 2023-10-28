@@ -1,3 +1,5 @@
+import sqlalchemy
+import datetime
 from sqlalchemy.schema import Column
 from sqlalchemy import Uuid, String, DateTime, ForeignKey
 
@@ -16,3 +18,5 @@ class EventModel(BaseModel):
     masterevent_id = Column(
         ForeignKey("events.id"), index=True, nullable=True,
         comment="event which owns this event")
+
+    lastchange = Column(DateTime, default=datetime.datetime.now)

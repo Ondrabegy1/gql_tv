@@ -37,6 +37,10 @@ class EventGQLModel:
     def enddate(self) -> datetime.datetime:
         return self.enddate
 
+    @strawberry.field(description="""Timestamp / token""")
+    def lastchange(self) -> typing.Optional[datetime.datetime]:
+        return self.lastchange
+
     @strawberry.field(description="""event which contains this event (aka semester of this lesson)""")
     async def master_event(self, info: strawberry.types.Info) -> typing.Union["EventGQLModel", None]:
         if (self.masterevent_id is None):
@@ -56,3 +60,57 @@ class EventGQLModel:
 @strawberry.field(description="""returns and event""")
 async def event_by_id(info: strawberry.types.Info, id: strawberry.ID) -> EventGQLModel:
     return await EventGQLModel.resolve_reference(info, id)
+
+###################################################################
+#
+# Mutations
+#
+###################################################################
+
+@strawberry.input(description="definition of event used for creation")
+class EventInsertGQLModel:
+    name: str = strawberry.field(description="name / label of event")
+    id: typing.Optional[strawberry.ID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
+    masterevent_id: typing.Optional[strawberry.ID] = strawberry.field(description="ID of master event", default=None)
+    startdate: typing.Optional[datetime.datetime] = strawberry.field(description="moment when event starts", default_factory=lambda: datetime.datetime.now())
+    enddate: typing.Optional[datetime.datetime] = strawberry.field(description="moment when event ends", default_factory=lambda: datetime.datetime.now() + datetime.timedelta(minutes = 30))
+
+@strawberry.input(description="definition of event used for update")
+class EventUpdateGQLModel:
+    id: strawberry.ID = strawberry.field(description="primary key (UUID), identifies object of operation")
+    lastchange: datetime.datetime = strawberry.field(description="timestamp / token for multiuser updates")
+    name: typing.Optional[str] = strawberry.field(description="name / label of event", default=None)
+    masterevent_id: typing.Optional[strawberry.ID] = strawberry.field(description="ID of master event", default=None)
+    startdate: typing.Optional[datetime.datetime] = strawberry.field(description="moment when event starts", default=None)
+    enddate: typing.Optional[datetime.datetime] = strawberry.field(description="moment when event ends", default=None)
+
+
+@strawberry.type(description="result of CUD operation on event")
+class EventResultGQLModel:
+    id: typing.Optional[strawberry.ID] = None
+    msg: str = strawberry.field(description="result of the operation ok / fail", default="")
+
+    @strawberry.field(description="""returns the event""")
+    async def event(self, info: strawberry.types.Info) -> EventGQLModel:
+        return await EventGQLModel.resolve_reference(info, self.id)
+
+@strawberry.mutation(description="write new event into database")
+async def event_insert(self, info: strawberry.types.Info, event: EventInsertGQLModel) -> EventResultGQLModel:
+    loader = getLoadersFromInfo(info).events
+    row = await loader.insert(event)
+    result = EventResultGQLModel()
+    result.msg = "ok"
+    result.id = row.id
+    return result
+
+@strawberry.mutation(description="update the event in database")
+async def event_update(self, info: strawberry.types.Info, event: EventUpdateGQLModel) -> EventResultGQLModel:
+    loader = getLoadersFromInfo(info).events
+    row = await loader.update(event)
+    result = EventResultGQLModel()
+    result.id = event.id
+    if row is None:
+        result.msg = "fail"
+    else:    
+        result.msg = "ok"
+    return result
