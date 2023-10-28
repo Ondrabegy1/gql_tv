@@ -100,3 +100,6 @@ Appropriate response should be
   }
 }
 ```
+
+This step introduced full connection with database and default database content. 
+GraphQL endpoint now on query retrieves data from database.
