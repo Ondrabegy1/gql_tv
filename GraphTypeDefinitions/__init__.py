@@ -11,7 +11,6 @@ class Query:
     ) -> str:
         return "hello world"
 
-
     from .eventGQLModel import event_by_id
     event_by_id = event_by_id
 

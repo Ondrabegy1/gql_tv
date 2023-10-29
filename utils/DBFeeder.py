@@ -9,6 +9,7 @@ import os
 import json
 from uoishelpers.feeders import ImportModels
 import datetime
+import uuid
 
 def get_demodata():
 
@@ -26,6 +27,8 @@ def get_demodata():
                         dateValueWOtzinfo = None
                 
                 json_dict[key] = dateValueWOtzinfo
+            if "id" in key:
+                json_dict[key] = uuid.UUID(value)
         return json_dict
 
 
