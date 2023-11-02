@@ -1,134 +1,132 @@
-## Step 8
+## Step 10
 
-This step will introduce test suite.
+This step introduces a capability to use authorization tokens.
 
-### Test suite
+### Authentization & Authorization
 
-Quite often the directory which contains tests is named `tests` (naturaly).
+Authentization is mechanism which ensures that questioner is That Entity (person).
 
-There are several suites for tests. In this case the `pytest` is used.
-We need python packages.
-To distinc runtime and development setup it is possible to define
-`requirements-dev.txt` file.
+Authorization is mechanism which ensures that questioner has proper right for particular operation (CRUD).
 
-It is possible to reinstall all packages from `requirements-dev.txt` file with
+Quite often for authorization is used (http/s request) header item named Authorization.
+This header item can have form `Authorization: Bearer ABCDEF`, where `ABCDEF` is token.
 
-```
-pip install -r requirements-dev.txt --force
-```
+When asgi application receives an incomming request, it encodes information about request in data structure. In this case (strawberry) this structure is available at `context["request"]`.
 
-the `--force` parameter ensures that all packages will be reinstaled.
+According a token value it is possible to find a user which is owner of the valid token. This process has been encoded into `utils.Dataloaders.py`. There is function
 
-To run tests there is command
-
-```
-pytest --cov-report term-missing --cov=DBDefinitions --cov=GraphTypeDefinitions --cov=utils
-```
-
-
-### SQLite
-
-To be able run tests without database backend we could use SQLite.
-A problem with uuid loads from file appears.
-To avoid them string values should be converted into uuid value.
-This can be done in `utils.DBFeeder.py` file.
-Look for 
 ```python
-            if "id" in key:
-                json_dict[key] = uuid.UUID(value)
+def getUser(info):
+    context = info.context
+    print(list(context.keys()))
+    result = context.get("user", None)
+    if result is None:
+        authorization = context["request"].headers.get("Authorization", None)
+        if authorization is not None:
+            if 'Bearer ' in authorization:
+                token = authorization.split(' ')[1]
+                if token == "2d9dc5ca-a4a2-11ed-b9df-0242ac120003":
+                    result = {
+                        "id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
+                        "name": "John",
+                        "surname": "Newbie",
+                        "email": "john.newbie@world.com"
+                    }
+                    context["user"] = result
+    print("getUser", result)
+    return result
 ```
 
-### Tests
 
-Many tests need smae initialization.
-Such utils are placed in `tests.shared.py` file.
-There are
+If the function is called for the first time (during service of request), the user is recognized from token (if possible) and stored in `context["user"]`. Each consequent call take the user description from `context["user"]` directly.
 
-- `prepare_in_memory_sqllite`, init sqlite server
-- `prepare_demodata`, fullfil in memory data
-- `createContext`, creates a datastructure for GQL schema execution
 
-There are also generalized tests.
-The generalization has been made by closures implementation.
-In this case there are functions which create tests.
-In file `tests.test_gt_definitions.py` are
+### Testing
 
-- `createByIdTest`, create, run and evaluate a query type `eventById`
-- `createPageTest`, create, run and evaluate a query type `eventPage`
-- `createResolveReferenceTest`, create, run and evaluate a query type `_entities` (low level system query)
-- `createFrontendQuery`, allows to define any query with variables and test result with list of lambdas
+The function creating context for tests (see `testing.shared.py`) is extended into form:
 
-Some tests are complex and beyond tools above.
-As an example there is `test_event_update`.
+```python
+async def createContext(asyncSessionMaker):
+    loadersContext = createLoadersContext(asyncSessionMaker)
+    user = {
+        "id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
+        "name": "John",
+        "surname": "Newbie",
+        "email": "john.newbie@world.com"
+    }
+    return {**loadersContext, "user": user}
+```
 
-If the tests are executed
+There is introduced new test endpoint using http simulator. The http client is created by funtion (see `tests.client.py`). This function overrides `DBDefinitions.ComposeConnectionString` to initialize DBServer on sqlite.
+
+```python
+def createGQLClient():
+
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    import DBDefinitions
+
+    def ComposeCString():
+        return "sqlite+aiosqlite:///:memory:"
+    
+    DBDefinitions.ComposeConnectionString = ComposeCString
+
+    import main
+    
+    client = TestClient(main.app)
+    return client
+```
+
+This `createGQLClient` function is used in one test (see `tests.test_client.py`).
+```python
+def test_client_read():
+    client = createGQLClient()
+    json = {
+        'query': """query($id: UUID!){ eventById(id: $id) {id} }""",
+        'variables': {
+            'id': '45b2df80-ae0f-11ed-9bd8-0242ac110002'
+        }
+    }
+    headers = {"Authorization": "Bearer 2d9dc5ca-a4a2-11ed-b9df-0242ac120003"}
+    response = client.post("/gql", headers=headers, json=json)
+    assert response.status_code == 200
+    response = response.json()
+    print(response)
+    assert response.get("error", None) is None
+    data = response.get("data", None)
+    assert data is not None
+    #assert False
+```
+
+This tests adds token to headers thus backend should identify user.
+
+The implemented token based authorization is quite weak but it demonstrates basic principles.
+Also this steps still does not used user information for restricting data access.
+
+### Note
+
+The function (see `main.py`)
+```python
+async def get_context():
+    asyncSessionMaker = appcontext.get("asyncSessionMaker", None)
+    if asyncSessionMaker is None:
+        async with initEngine(app) as cntx:
+            pass
+        
+    from utils.Dataloaders import createLoadersContext
+    return createLoadersContext(appcontext["asyncSessionMaker"])
+```
+has been changed to cover problems with client testing. The change checks if `appcontext["asyncSessionMaker"]` is already avaiable. If not, the initialization is performed.
+
+### Conclusion
+
+To run all tests there is command 
 
 ```
 pytest --cov-report term-missing --cov=DBDefinitions --cov=GraphTypeDefinitions --cov=utils
 ```
 
-Result shoud look like
-
+To run code in development there is 
 ```
-tests\test_dbdefinitions.py ....                                                                                                                                                                 [ 36%]
-tests\test_gt_definitions.py .......                                                                                                                                                             [100%]
-
----------- coverage: platform win32, python 3.10.10-final-0 ----------
-Name                                    Stmts   Miss  Cover   Missing
----------------------------------------------------------------------
-DBDefinitions\__init__.py                  31      4    87%   23-26
-DBDefinitions\baseDBModel.py                3      0   100%
-DBDefinitions\eventDBModel.py              14      0   100%
-DBDefinitions\uuid.py                       2      0   100%
-GraphTypeDefinitions\__init__.py           15      1    93%   12
-GraphTypeDefinitions\eventGQLModel.py      86      1    99%   16
-utils\DBFeeder.py                          36      5    86%   20, 25-27, 45
-utils\Dataloaders.py                       72     16    78%   19, 54-71
----------------------------------------------------------------------
-TOTAL                                     259     27    90%
+uvicorn main:app --reload
 ```
-
-There are not covered source lines. They are bounded by `await` expressions.
-This can be fixed by addition of file `.coveragearc` with content
-
-```
-[run]
-concurrency = gevent
-```
-
-`gevent` is package which must be installed.
-
-Now the coverage report shows
-
-```
----------- coverage: platform win32, python 3.10.10-final-0 ----------
-Name                                    Stmts   Miss  Cover   Missing
----------------------------------------------------------------------
-DBDefinitions\__init__.py                  31      4    87%   23-26
-DBDefinitions\baseDBModel.py                3      0   100%
-DBDefinitions\eventDBModel.py              14      0   100%
-DBDefinitions\uuid.py                       2      0   100%
-GraphTypeDefinitions\__init__.py           15      1    93%   12
-GraphTypeDefinitions\eventGQLModel.py      86      1    99%   16
-utils\DBFeeder.py                          36      5    86%   20, 25-27, 45
-utils\Dataloaders.py                       72      2    97%   19, 58
----------------------------------------------------------------------
-TOTAL                                     259     13    95%
-```
-
-### conclusion
-
-Tests are important part of reliable software.
-For python based software pytest can be used.
-It is also important to cover as much as possible source code lines.
-For such check there is possible to get coverage report.
-
-In this project tests are available with command
-
-```
-pytest --cov-report term-missing --cov=DBDefinitions --cov=GraphTypeDefinitions --cov=utils
-```
-
-The source code is not covered at 100%.
-
-Also take into account that some errors in previous steps have been found and corrected thanks to tests.

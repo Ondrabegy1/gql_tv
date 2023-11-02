@@ -38,7 +38,12 @@ def hello():
    return {'hello': 'world'}
 
 
-def get_context():
+async def get_context():
+    asyncSessionMaker = appcontext.get("asyncSessionMaker", None)
+    if asyncSessionMaker is None:
+        async with initEngine(app) as cntx:
+            pass
+        
     from utils.Dataloaders import createLoadersContext
     return createLoadersContext(appcontext["asyncSessionMaker"])
 

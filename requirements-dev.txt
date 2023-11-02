@@ -13,3 +13,4 @@ pytest-cov
 pytest-asyncio
 aiosqlite
 gevent
+httpx
