@@ -41,6 +41,13 @@ class EventGQLModel:
     def lastchange(self) -> typing.Optional[datetime.datetime]:
         return self.lastchange
 
+    from .permissions import SensitiveInfo
+    @strawberry.field(
+        permission_classes=[SensitiveInfo],
+        description="""This information is hidden from unathorized users""")
+    def sensitive_msg(self) -> typing.Optional[str]:
+        return "Hidden information"
+
     @strawberry.field(description="""event which contains this event (aka semester of this lesson)""")
     async def master_event(self, info: strawberry.types.Info) -> typing.Union["EventGQLModel", None]:
         if (self.masterevent_id is None):
