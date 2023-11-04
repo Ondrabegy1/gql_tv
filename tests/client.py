@@ -11,6 +11,6 @@ def createGQLClient():
 
     import main
     
-    client = TestClient(main.app)
+    client = TestClient(main.app, raise_server_exceptions=False)
     return client
 

@@ -11,8 +11,9 @@ class SensitiveInfo(BasePermission):
     # This method can also be async!
     async def has_permission(self, source: typing.Any, info: Info, **kwargs) -> bool:
         user = getUserFromInfo(info)
-        if user is None:
-            return False
-        if user["id"] == "2d9dc5ca-a4a2-11ed-b9df-0242ac120003":
-            return True
-        return False
+        #print("SensitiveInfo test for", user)
+        result = False
+        if user is not None:
+            if user["id"] == "2d9dc5ca-a4a2-11ed-b9df-0242ac120003":
+                result = True
+        return result

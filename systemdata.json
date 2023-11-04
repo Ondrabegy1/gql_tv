@@ -1,6 +1,11 @@
 {
     "events": [
         {
+            "id": "2ce31150-1757-4c5b-8626-f745bf6ae079",
+            "name": "corrupted event",
+            "startdate": "2021-14-01 00:00:00"
+        },
+        {
             "id": "45b2df80-ae0f-11ed-9bd8-0242ac110002" , 
             "name": "Zkouška", 
             "name_en": "Exam", 

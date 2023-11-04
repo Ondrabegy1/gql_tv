@@ -54,21 +54,20 @@ def createLoader(asyncSessionMaker, DBModel):
                 rows = rows.scalars()
                 rowToUpdate = next(rows, None)
 
-                if rowToUpdate is None:
-                    return None
-
-                dochecks = hasattr(rowToUpdate, 'lastchange')             
-                checkpassed = True  
-                if (dochecks):
-                    if (entity.lastchange != rowToUpdate.lastchange):
-                        result = None
-                        checkpassed = False                        
-                    else:
-                        entity.lastchange = datetime.datetime.now()
-                if checkpassed:
-                    rowToUpdate = update(rowToUpdate, entity, extraValues=extraValues)
-                    await session.commit()
-                    result = rowToUpdate               
+                result = None
+                if rowToUpdate is not None:
+                    dochecks = hasattr(rowToUpdate, 'lastchange')             
+                    checkpassed = True  
+                    if (dochecks):
+                        if (entity.lastchange != rowToUpdate.lastchange):
+                            result = None
+                            checkpassed = False                        
+                        else:
+                            entity.lastchange = datetime.datetime.now()
+                    if checkpassed:
+                        rowToUpdate = update(rowToUpdate, entity, extraValues=extraValues)
+                        await session.commit()
+                        result = rowToUpdate               
             return result
 
 
@@ -138,5 +137,5 @@ def getUserFromInfo(info):
                 if token == "2d9dc5ca-a4a2-11ed-b9df-0242ac120003":
                     result = demouser
                     context["user"] = result
-    print("getUser", result)
+    print("getUserFromInfo", result)
     return result

@@ -280,10 +280,16 @@ has been changed to cover problems with client testing. The change checks if `ap
 
 ### Conclusion
 
+There is little tuning to get high pytest code coverage (tests added).
 To run all tests there is command 
 
 ```
 pytest --cov-report term-missing --cov=DBDefinitions --cov=GraphTypeDefinitions --cov=utils
+```
+
+to see all logs
+```
+pytest --cov-report term-missing --cov=DBDefinitions --cov=GraphTypeDefinitions --cov=utils --log-cli-level=INFO
 ```
 
 To run code in development there is 

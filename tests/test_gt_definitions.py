@@ -24,7 +24,7 @@ def createByIdTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
         content = "{" + ", ".join(attributeNames) + "}"
         query = "query($id: UUID!){" f"{queryEndpoint}(id: $id)" f"{content}" "}"
 
-        context_value = await createContext(async_session_maker)
+        context_value = createContext(async_session_maker)
         variable_values = {"id": f'{datarow["id"]}'}
         print("query for", query, "with", variable_values)
 
@@ -53,7 +53,7 @@ def createPageTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
         content = "{" + ", ".join(attributeNames) + "}"
         query = "query{" f"{queryEndpoint}" f"{content}" "}"
 
-        context_value = await createContext(async_session_maker)
+        context_value = createContext(async_session_maker)
         print("query for", query)
 
         resp = await schema.execute(query, context_value=context_value)
@@ -91,7 +91,7 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
                 '}' + 
                 '}')
 
-            context_value = await createContext(async_session_maker)
+            context_value = createContext(async_session_maker)
             print("query for", query)
             resp = await schema.execute(query, context_value=context_value)
             data = resp.data
@@ -105,9 +105,10 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
 def createFrontendQuery(query="{}", variables={}, asserts=[]):
     @pytest.mark.asyncio
     async def test_frontend_query():    
+        print("createFrontendQuery")
         async_session_maker = await prepare_in_memory_sqllite()
         await prepare_demodata(async_session_maker)
-        context_value = await createContext(async_session_maker)
+        context_value = createContext(async_session_maker)
         print("query for", query, "with", variables)
         resp = await schema.execute(
             query=query, 
@@ -216,7 +217,7 @@ test_query_event_with_subevents = createFrontendQuery(
 async def test_event_update():    
     async_session_maker = await prepare_in_memory_sqllite()
     await prepare_demodata(async_session_maker)
-    context_value = await createContext(async_session_maker)
+    context_value = createContext(async_session_maker)
     query="""
         query($id: UUID!) {
             result: eventById(id: $id) {
@@ -319,3 +320,29 @@ test_query_event_failed_update = createFrontendQuery(
     ]
 )
 
+test_query_event_sensitive_failed = createFrontendQuery(
+    query="""
+        query($id: UUID!) {
+            result: eventById(id: $id) {
+                id
+                name
+                lastchange
+                sensitiveMsg
+            }
+        }""",
+    variables={
+        "id": "5194663f-11aa-4775-91ed-5f3d79269fed",
+    },
+    asserts = [
+        lambda data: runAssert(data.get("result", None) is not None, "expected data.result"),
+        lambda data: runAssert(data["result"].get("sensitiveMsg", None) is not None, "expected not None ")
+    ]
+)
+
+test_query_hello = createFrontendQuery(
+    query="""{ hello }""",
+    variables={},
+    asserts = [
+        lambda data: runAssert(data.get("hello", None) is not None, "expected data.hello"),
+    ]
+)

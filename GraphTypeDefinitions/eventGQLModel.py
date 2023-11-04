@@ -12,12 +12,11 @@ from utils.Dataloaders import getLoadersFromInfo
 class EventGQLModel:
     @classmethod
     async def resolve_reference(cls, info: strawberry.types.Info, id: uuid.UUID):
-        if id is None: 
-            return None
-
-        loaders = getLoadersFromInfo(info)
-        eventloader = loaders.events
-        result = await eventloader.load(id=id)
+        result = None
+        if id is not None: 
+            loaders = getLoadersFromInfo(info)
+            eventloader = loaders.events
+            result = await eventloader.load(id=id)
 
         return result
 
@@ -46,7 +45,7 @@ class EventGQLModel:
         permission_classes=[SensitiveInfo],
         description="""This information is hidden from unathorized users""")
     def sensitive_msg(self) -> typing.Optional[str]:
-        return "Hidden information"
+        return "sensitive information"
 
     @strawberry.field(description="""event which contains this event (aka semester of this lesson)""")
     async def master_event(self, info: strawberry.types.Info) -> typing.Union["EventGQLModel", None]:

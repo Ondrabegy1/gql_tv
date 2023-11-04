@@ -16,9 +16,8 @@ def get_demodata():
     def datetime_parser(json_dict):
         for (key, value) in json_dict.items():
             if key in ["startdate", "enddate", "lastchange", "created"]:
-                if value is None:
-                    dateValueWOtzinfo = None
-                else:
+                dateValueWOtzinfo = None
+                if value is not None:
                     try:
                         dateValue = datetime.datetime.fromisoformat(value)
                         dateValueWOtzinfo = dateValue.replace(tzinfo=None)
@@ -41,10 +40,9 @@ async def initDB(asyncSessionMaker):
 
     defaultNoDemo = "False"
     default = "True"
-    if default == os.environ.get("DEMO", defaultNoDemo):
-        dbModels = []
-    else:
-        dbModels = [
+    dbModels = []
+    if not(default == os.environ.get("DEMO", defaultNoDemo)):
+        dbModels = dbModels + [
             EventModel
         ]
 

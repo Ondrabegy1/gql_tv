@@ -48,7 +48,7 @@ async def prepare_demodata(async_session_maker):
 
 from utils.Dataloaders import createLoadersContext
 
-async def createContext(asyncSessionMaker):
+def createContext(asyncSessionMaker, withuser=True):
     loadersContext = createLoadersContext(asyncSessionMaker)
     user = {
         "id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
@@ -56,4 +56,22 @@ async def createContext(asyncSessionMaker):
         "surname": "Newbie",
         "email": "john.newbie@world.com"
     }
-    return {**loadersContext, "user": user}
+    if withuser:
+        loadersContext["user"] = user
+    
+    return loadersContext
+
+def createInfo(asyncSessionMaker, withuser=True):
+    class Request():
+        @property
+        def headers(self):
+            return {"Authorization": "Bearer 2d9dc5ca-a4a2-11ed-b9df-0242ac120003"}
+        
+    class Info():
+        @property
+        def context(self):
+            context = createContext(asyncSessionMaker, withuser=withuser)
+            context["request"] = Request()
+            return context
+        
+    return Info()
