@@ -1,284 +1,192 @@
-## Step 10
+## Step 11
 
-This step introduces a capability to use authorization tokens.
+This step extends GQL federation entities.
 
-### Authentization & Authorization
+### GQL federation
 
-Authentization is mechanism which ensures that questioner is That Entity (person).
+Federation allows to split entites across different endpoints.
+It is also possible to extend (aka add new attributes) entities which are defined in different GQL endpoint.
 
-Authorization is mechanism which ensures that questioner has proper right for particular operation (CRUD).
+### Entity defined elsewhere
 
-Quite often for authorization is used (http/s request) header item named Authorization.
-This header item can have form `Authorization: Bearer ABCDEF`, where `ABCDEF` is token.
-
-When asgi application receives an incomming request, it encodes information about request in data structure. In this case (strawberry) this structure is available at `context["request"]`.
-
-According a token value it is possible to find a user which is owner of the valid token. This process has been encoded into `utils.Dataloaders.py`. There is function `getUserFromInfo`
+Base entity structure si defined bellow. Notice (and compare with `EventGQLModel`) `resolve_reference` method. If there is responsibility for retrieval information from database this method executes appropriate reading.
+Because it is not know where and how the entity is stored, it is impossible to communicate.
+Instead there is object created with initial values (keys) filled.
 
 ```python
-demouser = {
-    "id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
-    "name": "John",
-    "surname": "Newbie",
-    "email": "john.newbie@world.com",
-    "roles": [
-        {
-            "valid": True,
-            "group": {
-                "id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003",
-                "name": "Uni"
-            },
-            "roletype": {
-                "id": "ced46aa4-3217-4fc1-b79d-f6be7d21c6b6",
-                "name": "administrátor"
-            }
-        },
-        {
-            "valid": True,
-            "group": {
-                "id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003",
-                "name": "Uni"
-            },
-            "roletype": {
-                "id": "ae3f0d74-6159-11ed-b753-0242ac120003",
-                "name": "rektor"
-            }
-        }
-    ]
-}
+import strawberry
 
-def getUserFromInfo(info):
-    context = info.context
-    #print(list(context.keys()))
-    result = context.get("user", None)
-    if result is None:
-        authorization = context["request"].headers.get("Authorization", None)
-        if authorization is not None:
-            if 'Bearer ' in authorization:
-                token = authorization.split(' ')[1]
-                if token == "2d9dc5ca-a4a2-11ed-b9df-0242ac120003":
-                    result = demouser
-                    context["user"] = result
-    print("getUser", result)
-    return result
+@strawberry.federation.type(extend=True, keys=["id"])
+class UserGQLModel:
+
+    id: strawberry.ID = strawberry.federation.field(external=True)
+
+    @classmethod
+    async def resolve_reference(cls, id: strawberry.ID):
+        result = None
+        if id is not None:
+            result = UserGQLModel(id=id)
+        return result
 ```
 
-If the function is called for the first time (during service of request), the user is recognized from token (if possible) and stored in `context["user"]`. Each consequent call take the user description from `context["user"]` directly.
+### Database backend
+
+To connect event with user we should think the relation type.
+Because naturally event should be visited by multiple users and user can participate on multiple events, the relation type is N:M.
+Such relation is in database projected by a special table.
 
 
-### Testing
-
-The function creating context for tests (see `testing.shared.py`) is extended into form:
+The table in minimal definition has primary key (`id`) and two other attributes.
+First one is `user_id`. Because we do not know where `users` and how are stored, there should not be foreignkey. This is reason why we have here just ordinal column typed as `Uuid`.
+On the other hand the attribute linking the event should be a foreignkey pointing to `id` of `users` table.
+Because we need fast access to both attributes, they are marked as indexed `index=True`.
 
 ```python
-async def createContext(asyncSessionMaker):
-    loadersContext = createLoadersContext(asyncSessionMaker)
-    user = {
-        "id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
-        "name": "John",
-        "surname": "Newbie",
-        "email": "john.newbie@world.com"
-    }
-    return {**loadersContext, "user": user}
+class EventUserModel(BaseModel):
+    __tablename__ = "events_users"
+
+    id = Column(Uuid, primary_key=True, comment="primary key", default=uuid)
+    user_id = Column(Uuid, index=True, comment="link to user")
+    event_id = Column(ForeignKey("events.id"), index=True, comment="link to event")
 ```
 
-There is introduced new test endpoint using http simulator. The http client is created by funtion (see `tests.client.py`). This function overrides `DBDefinitions.ComposeConnectionString` to initialize DBServer on sqlite.
+To "activate" this table definition we must explicitly include the source into imports.
+The first should be done by import in `DBDefinitions.__init__`.
 
-```python
-def createGQLClient():
+Also it could be quite handy to extend `systemdata.json` file with appropriate records.
 
-    from fastapi import FastAPI
-    from fastapi.testclient import TestClient
-    import DBDefinitions
-
-    def ComposeCString():
-        return "sqlite+aiosqlite:///:memory:"
-    
-    DBDefinitions.ComposeConnectionString = ComposeCString
-
-    import main
-    
-    client = TestClient(main.app)
-    return client
-```
-
-This `createGQLClient` function is used in one test (see `tests.test_client.py`).
-```python
-def test_client_read():
-    client = createGQLClient()
-    json = {
-        'query': """query($id: UUID!){ eventById(id: $id) {id} }""",
-        'variables': {
-            'id': '45b2df80-ae0f-11ed-9bd8-0242ac110002'
-        }
-    }
-    headers = {"Authorization": "Bearer 2d9dc5ca-a4a2-11ed-b9df-0242ac120003"}
-    response = client.post("/gql", headers=headers, json=json)
-    assert response.status_code == 200
-    response = response.json()
-    print(response)
-    assert response.get("error", None) is None
-    data = response.get("data", None)
-    assert data is not None
-    #assert False
-```
-
-This tests adds token to headers thus backend should identify user.
-
-The implemented token based authorization is quite weak but it demonstrates basic principles.
-Also this steps still does not used user information for restricting data access.
-
-### Permissions
-
-Strawberry use permission class to restrict access to field (see https://strawberry.rocks/docs/guides/permissions). The `EventGQLModel` has been extended with a field which can read only authorized user.
-```python
-    from .permissions import SensitiveInfo
-    @strawberry.field(
-        permission_classes=[SensitiveInfo],
-        description="""This information is hidden from unathorized users""")
-    def sensitive_msg(self) -> typing.Optional[str]:
-        return "Hidden information"
-
-```
-
-`SensitiveInfo` class is defined in `GraphTypeDefinitions.permissions.py`
-```python
-from utils.Dataloaders import getUser
-
-class SensitiveInfo(BasePermission):
-    message = "User is not allowed to read sensitive info"
-
-    # This method can also be async!
-    async def has_permission(self, source: typing.Any, info: Info, **kwargs) -> bool:
-        user = getUser(info)
-        if user is None:
-            return False
-        if user["id"] == "2d9dc5ca-a4a2-11ed-b9df-0242ac120003":
-            return True
-        return False
-```
-
-This class (its method) returns `True` only for user with particular id. The user is determined in function `getUser` (see above) and describing structure is returned.
-
-The general determination if user would have access to a field could be a quite complicated problem.
-Often the access is based on Role based access control (RBAC https://en.wikipedia.org/wiki/Role-based_access_control).
-
-### Short on RBAC
-Role based access control is determination if an user has a role which is allowed to perform and operation (CRUD). 
-In simple systems are users which have roles and this is enought. 
-But for complex systems like an university is also important to check if the user has a role for a group which has right to do CRUD.
-As an example we could think about dean and faculty. 
-At university are several faculties but dean should operate only on faculty which they are leading.
-
-To cover this problem tables `users`, `groups`, `roles`, `roletypes` and `usergroups` with appropriate relations could be defined. To explain:
-
-- user can be member of many groups
-- group can have multiple members
-- user can play roles (with roletype) for groups (stored in `roles`)
-
-Let an user is defined as
 ```json
-{
-    "id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
-    "name": "John",
-    "surname": "Newbie",
-    "email": "john.newbie@world.com",
-    "roles": [
+    "events_users": [
         {
-            "valid": true,
-            "group": {
-                "id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003",
-                "name": "Uni"
-            },
-            "roletype": {
-                "id": "ced46aa4-3217-4fc1-b79d-f6be7d21c6b6",
-                "name": "administrátor"
-            }
+            "id": "89d1e684-ae0f-11ed-9bd8-0242ac110002", 
+            "user_id": "89d1e724-ae0f-11ed-9bd8-0242ac110002", 
+            "event_id": "45b2df80-ae0f-11ed-9bd8-0242ac110002"
         },
         {
-            "valid": true,
-            "group": {
-                "id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003",
-                "name": "Uni"
-            },
-            "roletype": {
-                "id": "ae3f0d74-6159-11ed-b753-0242ac120003",
-                "name": "rektor"
-            }
+            "id": "89d1f2d2-ae0f-11ed-9bd8-0242ac110002", 
+            "user_id": "89d1f34a-ae0f-11ed-9bd8-0242ac110002", 
+            "event_id": "45b2df80-ae0f-11ed-9bd8-0242ac110002"
         }
+    ]    
+```
+
+Do not forget do include appropriate model (`EventUserModel`) in initial DB feeding (`initDB` in `utils.DBFeeder`).
+
+### Loaders
+
+For access to DB loaders are used. 
+Because we have extended DB with table `events_users` we should extend loaders also.
+Check `utils.Dataloaders`.
+
+```python
+def createLoaders(asyncSessionMaker):
+    class Loaders:
+        @property
+        @cache
+        def events(self):
+            return createLoader(asyncSessionMaker, EventModel)
+
+        @property
+        @cache
+        def eventusers(self):
+            return createLoader(asyncSessionMaker, EventUserModel)
+        
+    return Loaders()
+
+```
+
+### Entity extension
+
+At this point we have DB prepared. Now both GQL models should be extended.
+
+
+### Test coverage
+
+It is important that code (even newly added) is covered by tests.
+Bellow is created test (by calling `createFrontendQuery`) for `EventGQLModel.users` attribute coverage.
+
+```python
+test_query_event_with_users = createFrontendQuery(
+    query="""
+        query($id: UUID!) {
+            result: eventById(id: $id) {
+                id
+                name
+                lastchange
+                users { 
+                    id 
+                    events {
+                        id
+                        name
+                    }
+                }
+            }
+        }""",
+    variables={
+        "id": "45b2df80-ae0f-11ed-9bd8-0242ac110002",
+    },
+    asserts = [
+        lambda data: runAssert(data.get("result", None) is not None, "expected data.result"),
+        lambda data: runAssert(data["result"].get("users", None) is not None, "expected not None ")
     ]
-}
+)
 ```
 
-then RBAC could be implemented in class like:
+It is also needed to test attribute `events` for entity `UserGQLModel`. 
+Because we have not a method to query for `UserGQLModel`, we should use another approach.
+This is demonstrated below. 
+There is used a special query for `_entities`.
 
 ```python
-def WhereAuthorized(user, rolesNeeded):
-    roleIdsNeeded = list(map(lambda item: item["id"], rolesNeeded))
-    print("roleIdsNeeded", roleIdsNeeded)
-    # 👇 filtrace roli, ktere maji pozadovanou uroven autorizace
-    roletypesFiltered = filter(lambda item: item["roletype"]["id"] in roleIdsNeeded, user["roles"])
-    # 👇 odvozeni, pro ktere skupiny ma tazatel patricnou uroven autorizace
-    groupsAuthorizedIds = map(lambda item: item["group"]["id"], roletypesFiltered)
-    # 👇 konverze na list
-    groupsAuthorizedIds = list(groupsAuthorizedIds)
-    print("groupsAuthorizedIds", groupsAuthorizedIds)
-    return groupsAuthorizedIds
-
-class UserGDPRPermission(BasePermission):
-    message = "User has not proper rights"
-
-    async def has_permission(
-        self, source, info: strawberry.types.Info, **kwargs
-    ) -> bool:
-        
-        loader = getLoader(info).memberships
-        
-        # 👇 kdo se pta, a jake role ma
-        userAwaitable = getUserFromHeaders({})       
-        # 👇 na koho se pta a v jakych skupinach je clenem
-        membershipsAwaitable = loader.filter_by(user_id=source.id)
-        # 👇 soubeh dotazu
-        [user, memberships, *_] = await asyncio.gather(userAwaitable, membershipsAwaitable)
-        
-        # 👇 jake role jsou nutne pro ziskani informace
-        rolesNeeded = [{'id': 'ced46aa4-3217-4fc1-b79d-f6be7d21c6b6', 'name': 'administrátor'}, {'id': 'ae3f0d74-6159-11ed-b753-0242ac120003', 'name': 'rektor'}]      
-        # 👇 id skupin, kde ma tazatel pozadovane opravneni
-        groupsAuthorizedIds = WhereAuthorized(user, rolesNeeded=rolesNeeded)
-
-        # 👇 id skupin, kde je cil clenem
-        userGroupIds = list(map(lambda item: item.group_id, memberships))
-        print("userGroupIds", userGroupIds)
-        # 👇 filtrace skupin, kde je cil clenem a kde ma tazatel autorizaci
-        groupidsIntersection = filter(lambda item: item in groupsAuthorizedIds, userGroupIds)
-        # 👇 je zde alespon jeden prunik?
-        isAuthorized = next(groupidsIntersection, None) is not None
-        print("isAuthorized", isAuthorized)
-
-        print("UserGDPRPermission.user", user)
-        print("UserGDPRPermission.source", source.id) # SQLAlchemyModel
-        print("UserGDPRPermission.self", self) # GQLModel
-        print("UserGDPRPermission.kwargs", kwargs) # resolver parameters
-        # return True
-        return isAuthorized
+test_query_user_with_events = createFrontendQuery(
+    query="""
+        query($id: UUID!) { 
+            result: _entities(representations: [{ __typename: "UserGQLModel", id: $id }]) {
+                ...on UserGQLModel { 
+                    id 
+                    events {
+                        id
+                        name
+                    }
+                }
+            }
+        }""",
+    variables={
+        "id": "89d1e724-ae0f-11ed-9bd8-0242ac110002",
+    },
+    asserts = [
+        lambda data: runAssert(data.get("result", None) is not None, "expected data.result")
+    ]
+)
 ```
-
-### Note
-
-The function (see `main.py`)
-```python
-async def get_context():
-    asyncSessionMaker = appcontext.get("asyncSessionMaker", None)
-    if asyncSessionMaker is None:
-        async with initEngine(app) as cntx:
-            pass
-        
-    from utils.Dataloaders import createLoadersContext
-    return createLoadersContext(appcontext["asyncSessionMaker"])
-```
-has been changed to cover problems with client testing. The change checks if `appcontext["asyncSessionMaker"]` is already avaiable. If not, the initialization is performed.
 
 ### Conclusion
+
+The entity from other federation member (`UserGQLModel`) has been extended and entity `EventGQLModel` has method which returns a `List[UserGQLModel]`.
+
+
+```
+uvicorn main:app --reload
+```
+
+The query bellow returns a link to other federation members
+
+```gql
+{
+    result: eventById(id: "45b2df80-ae0f-11ed-9bd8-0242ac110002") {
+        id
+        name
+        lastchange
+        users { 
+            id 
+            events {
+                id
+                name
+            }
+        }
+    }
+}
+```
 
 There is little tuning to get high pytest code coverage (tests added).
 To run all tests there is command 

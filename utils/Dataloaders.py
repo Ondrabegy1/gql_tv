@@ -2,7 +2,7 @@ import datetime
 from sqlalchemy import select
 from functools import cache
 
-from DBDefinitions.eventDBModel import EventModel
+from DBDefinitions import EventModel, EventUserModel
 
 def update(destination, source=None, extraValues={}):
     """Updates destination's attributes with source's attributes.
@@ -80,6 +80,11 @@ def createLoaders(asyncSessionMaker):
         def events(self):
             return createLoader(asyncSessionMaker, EventModel)
 
+        @property
+        @cache
+        def eventusers(self):
+            return createLoader(asyncSessionMaker, EventUserModel)
+        
     return Loaders()
 
 

@@ -346,3 +346,49 @@ test_query_hello = createFrontendQuery(
         lambda data: runAssert(data.get("hello", None) is not None, "expected data.hello"),
     ]
 )
+
+test_query_event_with_users = createFrontendQuery(
+    query="""
+        query($id: UUID!) {
+            result: eventById(id: $id) {
+                id
+                name
+                lastchange
+                users { 
+                    id 
+                    events {
+                        id
+                        name
+                    }
+                }
+            }
+        }""",
+    variables={
+        "id": "45b2df80-ae0f-11ed-9bd8-0242ac110002",
+    },
+    asserts = [
+        lambda data: runAssert(data.get("result", None) is not None, "expected data.result"),
+        lambda data: runAssert(data["result"].get("users", None) is not None, "expected not None ")
+    ]
+)
+
+test_query_user_with_events = createFrontendQuery(
+    query="""
+        query($id: UUID!) { 
+            result: _entities(representations: [{ __typename: "UserGQLModel", id: $id }]) {
+                ...on UserGQLModel { 
+                    id 
+                    events {
+                        id
+                        name
+                    }
+                }
+            }
+        }""",
+    variables={
+        "id": "89d1e724-ae0f-11ed-9bd8-0242ac110002",
+    },
+    asserts = [
+        lambda data: runAssert(data.get("result", None) is not None, "expected data.result")
+    ]
+)

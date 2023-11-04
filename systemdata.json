@@ -77,5 +77,18 @@
             "enddate": "2023-09-01T00:00:00",
             "_chunk": 1
         }
-    ]
+    ],
+
+    "events_users": [
+        {
+            "id": "89d1e684-ae0f-11ed-9bd8-0242ac110002", 
+            "user_id": "89d1e724-ae0f-11ed-9bd8-0242ac110002", 
+            "event_id": "45b2df80-ae0f-11ed-9bd8-0242ac110002"
+        },
+        {
+            "id": "89d1f2d2-ae0f-11ed-9bd8-0242ac110002", 
+            "user_id": "89d1f34a-ae0f-11ed-9bd8-0242ac110002", 
+            "event_id": "45b2df80-ae0f-11ed-9bd8-0242ac110002"
+        }
+    ]    
 }

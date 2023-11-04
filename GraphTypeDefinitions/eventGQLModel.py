@@ -2,8 +2,11 @@ import uuid
 import strawberry
 import datetime
 import typing
+import asyncio
 
 from utils.Dataloaders import getLoadersFromInfo
+
+UserGQLModel = typing.Annotated["UserGQLModel", strawberry.lazy(".userGQLModel")]
 
 @strawberry.federation.type(
     keys=["id"],
@@ -61,6 +64,16 @@ class EventGQLModel:
         eventloader = loaders.events
         result = await eventloader.filter_by(masterevent_id=self.id)
         return result
+
+    @strawberry.field(description="""users participating on the event""")
+    async def users(self, info: strawberry.types.Info) -> typing.List["UserGQLModel"]:
+        loaders = getLoadersFromInfo(info)
+        eventloader = loaders.eventusers
+        rows = await eventloader.filter_by(event_id=self.id)
+        userids = (row.user_id for row in rows)
+        futureusers = (UserGQLModel.resolve_reference(id=id) for id in userids)
+        users = await asyncio.gather(*futureusers)
+        return users
 
 import uuid
 @strawberry.field(description="""returns and event""")
