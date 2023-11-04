@@ -98,7 +98,51 @@ def createLoaders(asyncSessionMaker):
 ### Entity extension
 
 At this point we have DB prepared. Now both GQL models should be extended.
+In the method, loader is accessed then used for filtering records.
+Comprehension `(row.event_id for row in rows)` transforms records to ids.
+By the way, this kind of comprehension is generator like, it cannot be used (iterated) twice.
+`futureevents` are concurently gathered with the help of `events = await asyncio.gather(*futureevents)`. In the end `events` are returned.
 
+```python
+@strawberry.federation.type(extend=True, keys=["id"])
+class UserGQLModel:
+
+    ...
+    from .eventGQLModel import EventGQLModel
+
+    @strawberry.field(description="""users participating on the event""")
+    async def events(self, info: strawberry.types.Info) -> typing.List["EventGQLModel"]:
+        loaders = getLoadersFromInfo(info)
+        loader = loaders.eventusers
+        rows = await loader.filter_by(user_id=self.id)
+
+        event_ids = (row.event_id for row in rows)
+        futureevents = (EventGQLModel.resolve_reference(info, eventid) for eventid in event_ids)
+        events = await asyncio.gather(*futureevents)
+        return events
+```
+
+The `EventGQLModel` is extended to get event participants. 
+Method implementation is very similar to method `UserGQLModel.events`.
+
+```python
+@strawberry.federation.type(
+    keys=["id"],
+    description="""Entity representing an object""",
+)
+class EventGQLModel:
+    ...
+    @strawberry.field(description="""users participating on the event""")
+    async def users(self, info: strawberry.types.Info) -> typing.List["UserGQLModel"]:
+        loaders = getLoadersFromInfo(info)
+        loader = loaders.eventusers
+        rows = await loader.filter_by(event_id=self.id)
+
+        userids = (row.user_id for row in rows)
+        futureusers = (UserGQLModel.resolve_reference(id=id) for id in userids)
+        users = await asyncio.gather(*futureusers)
+        return users
+```
 
 ### Test coverage
 
@@ -160,6 +204,15 @@ test_query_user_with_events = createFrontendQuery(
 )
 ```
 
+### Extra on logging
+
+In the code simple `print` statement has been replaced with `logging.info`, `logging.debug`, ...
+Check `main.py`, look for
+
+```python
+logging.basicConfig(format='%(asctime)s\t%(levelname)s:\t%(message)s', level=logging.DEBUG, datefmt='%Y-%m-%dT%I:%M:%S')
+```
+
 ### Conclusion
 
 The entity from other federation member (`UserGQLModel`) has been extended and entity `EventGQLModel` has method which returns a `List[UserGQLModel]`.
@@ -202,5 +255,5 @@ pytest --cov-report term-missing --cov=DBDefinitions --cov=GraphTypeDefinitions 
 
 To run code in development there is 
 ```
-uvicorn main:app --reload
+uvicorn main:app --log-config=log_conf.yaml --reload
 ```

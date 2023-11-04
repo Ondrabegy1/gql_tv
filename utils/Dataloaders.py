@@ -1,3 +1,4 @@
+import logging
 import datetime
 from sqlalchemy import select
 from functools import cache
@@ -142,5 +143,5 @@ def getUserFromInfo(info):
                 if token == "2d9dc5ca-a4a2-11ed-b9df-0242ac120003":
                     result = demouser
                     context["user"] = result
-    print("getUserFromInfo", result)
+    logging.debug("getUserFromInfo", result)
     return result

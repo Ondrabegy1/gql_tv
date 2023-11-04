@@ -1,3 +1,4 @@
+import logging
 import typing
 import strawberry
 from strawberry.permission import BasePermission
@@ -16,4 +17,5 @@ class SensitiveInfo(BasePermission):
         if user is not None:
             if user["id"] == "2d9dc5ca-a4a2-11ed-b9df-0242ac120003":
                 result = True
+        logging.info(f"{user} attempt to get sensitive information")
         return result

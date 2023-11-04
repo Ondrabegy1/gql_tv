@@ -68,8 +68,9 @@ class EventGQLModel:
     @strawberry.field(description="""users participating on the event""")
     async def users(self, info: strawberry.types.Info) -> typing.List["UserGQLModel"]:
         loaders = getLoadersFromInfo(info)
-        eventloader = loaders.eventusers
-        rows = await eventloader.filter_by(event_id=self.id)
+        loader = loaders.eventusers
+        rows = await loader.filter_by(event_id=self.id)
+        
         userids = (row.user_id for row in rows)
         futureusers = (UserGQLModel.resolve_reference(id=id) for id in userids)
         users = await asyncio.gather(*futureusers)

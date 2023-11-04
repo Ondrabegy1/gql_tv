@@ -1,3 +1,4 @@
+import logging
 import sqlalchemy
 import sys
 import asyncio
@@ -26,7 +27,8 @@ def createByIdTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
 
         context_value = createContext(async_session_maker)
         variable_values = {"id": f'{datarow["id"]}'}
-        print("query for", query, "with", variable_values)
+        
+        logging.debug(f"query for {query} with {variable_values}")
 
         resp = await schema.execute(
             query, context_value=context_value, variable_values=variable_values
@@ -54,7 +56,7 @@ def createPageTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
         query = "query{" f"{queryEndpoint}" f"{content}" "}"
 
         context_value = createContext(async_session_maker)
-        print("query for", query)
+        logging.debug(f"query for {query}")
 
         resp = await schema.execute(query, context_value=context_value)
 
@@ -92,10 +94,10 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
                 '}')
 
             context_value = createContext(async_session_maker)
-            print("query for", query)
+            logging.debug(f"query for {query}")
             resp = await schema.execute(query, context_value=context_value)
             data = resp.data
-            print(data, flush=True)
+            logging.debug(data)
             data = data['_entities'][0]
 
             assert data['id'] == rowid
@@ -105,11 +107,11 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
 def createFrontendQuery(query="{}", variables={}, asserts=[]):
     @pytest.mark.asyncio
     async def test_frontend_query():    
-        print("createFrontendQuery")
+        logging.debug("createFrontendQuery")
         async_session_maker = await prepare_in_memory_sqllite()
         await prepare_demodata(async_session_maker)
         context_value = createContext(async_session_maker)
-        print("query for", query, "with", variables)
+        logging.debug(f"query for {query} with {variables}")
         resp = await schema.execute(
             query=query, 
             variable_values=variables, 
@@ -118,7 +120,7 @@ def createFrontendQuery(query="{}", variables={}, asserts=[]):
 
         assert resp.errors is None
         respdata = resp.data
-        print(respdata)
+        logging.debug(f"response: {respdata}")
         for a in asserts:
             a(respdata)
     return test_frontend_query
@@ -228,7 +230,7 @@ async def test_event_update():
     variables={
         "id": "5194663f-11aa-4775-91ed-5f3d79269fed"
     }
-    print("query for", query, "with", variables)
+    logging.debug(f"query for {query} with {variables}")
     resp = await schema.execute(
         query=query, 
         variable_values=variables, 
@@ -268,7 +270,7 @@ async def test_event_update():
         "lastchange": lastchange,
         "name": newName
     }
-    print("query for", query, "with", variables)
+    logging.debug(f"query for {query} with {variables}")
     resp = await schema.execute(
         query=query, 
         variable_values=variables, 

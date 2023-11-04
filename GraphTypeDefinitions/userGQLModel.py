@@ -23,8 +23,8 @@ class UserGQLModel:
     @strawberry.field(description="""users participating on the event""")
     async def events(self, info: strawberry.types.Info) -> typing.List["EventGQLModel"]:
         loaders = getLoadersFromInfo(info)
-        eventloader = loaders.eventusers
-        rows = await eventloader.filter_by(user_id=self.id)
+        loader = loaders.eventusers
+        rows = await loader.filter_by(user_id=self.id)
 
         event_ids = map(lambda item: item.event_id, rows)
         futureevents = (EventGQLModel.resolve_reference(info, eventid) for eventid in event_ids)

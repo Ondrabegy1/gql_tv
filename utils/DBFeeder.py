@@ -1,3 +1,4 @@
+import logging
 from functools import cache
 from DBDefinitions import (
     EventModel, EventUserModel
@@ -22,7 +23,7 @@ def get_demodata():
                         dateValue = datetime.datetime.fromisoformat(value)
                         dateValueWOtzinfo = dateValue.replace(tzinfo=None)
                     except:
-                        print("jsonconvert Error", key, value, flush=True)
+                        logging.error(f'jsonconvert Error "{key}": "{value}"')
                         dateValueWOtzinfo = None
                 
                 json_dict[key] = dateValueWOtzinfo

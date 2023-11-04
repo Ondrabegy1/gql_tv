@@ -1,3 +1,4 @@
+import logging
 import sqlalchemy
 
 from sqlalchemy.orm import sessionmaker
@@ -16,13 +17,13 @@ async def startEngine(connectionstring, makeDrop=False, makeUp=True):
     async with asyncEngine.begin() as conn:
         if makeDrop:
             await conn.run_sync(BaseModel.metadata.drop_all)
-            print("BaseModel.metadata.drop_all finished")
+            logging.info("BaseModel.metadata.drop_all finished")
         if makeUp:
             try:
                 await conn.run_sync(BaseModel.metadata.create_all)
-                print("BaseModel.metadata.create_all finished")
+                logging.info("BaseModel.metadata.create_all finished")
             except sqlalchemy.exc.NoReferencedTableError as e:
-                print(e, "Unable automaticaly create tables")
+                logging.info(f"{e} : Unable automaticaly create tables")
                 return None
 
     async_sessionMaker = sessionmaker(
@@ -46,5 +47,5 @@ def ComposeConnectionString():
     driver = "postgresql+asyncpg"  # "postgresql+psycopg2"
     connectionstring = f"{driver}://{user}:{password}@{hostWithPort}/{database}"
 
-    print("CString", database, "at", hostWithPort)
+    logging.info(f"CString {database} at {hostWithPort}")
     return connectionstring
