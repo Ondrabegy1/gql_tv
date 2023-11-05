@@ -70,7 +70,7 @@ class EventGQLModel:
         loaders = getLoadersFromInfo(info)
         loader = loaders.eventusers
         rows = await loader.filter_by(event_id=self.id)
-        
+
         userids = (row.user_id for row in rows)
         futureusers = (UserGQLModel.resolve_reference(id=id) for id in userids)
         users = await asyncio.gather(*futureusers)
@@ -134,3 +134,38 @@ async def event_update(self, info: strawberry.types.Info, event: EventUpdateGQLM
     else:    
         result.msg = "ok"
     return result
+
+###################################################################
+#
+# Where tests
+#
+###################################################################
+
+
+from dataclasses import dataclass
+from .utils import createInputs
+
+@createInputs
+@dataclass
+class EventInput:
+    name: str
+    startdate: datetime.datetime
+    enddate: datetime.datetime
+
+from utils.Dataloaders import EventSelectByWhere
+
+@strawberry.field(description="""returns list of events""")
+async def event_page(
+    info: strawberry.types.Info, 
+    skip: typing.Optional[int] = 0,
+    limit: typing.Optional[int] = 100,
+    where: typing.Optional[EventInput] = None
+    ) -> typing.List[EventGQLModel]:
+
+    statement = EventSelectByWhere(where).offset(skip).limit(limit)
+
+    loaders = getLoadersFromInfo(info)
+    loader = loaders.events
+    result = await loader.execute_select(statement)
+    return result
+

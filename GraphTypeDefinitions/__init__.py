@@ -14,6 +14,9 @@ class Query:
     from .eventGQLModel import event_by_id
     event_by_id = event_by_id
 
+    from .eventGQLModel import event_page
+    event_page = event_page
+
 @strawberry.type(description="""Type for mutation root""")
 class Mutation:
     from .eventGQLModel import event_insert

@@ -1,5 +1,8 @@
 import logging
-logging.basicConfig(format='%(asctime)s\t%(levelname)s:\t%(message)s', level=logging.DEBUG, datefmt='%Y-%m-%dT%I:%M:%S')
+logging.basicConfig(
+    level=logging.DEBUG, 
+    format='%(asctime)s.%(msecs)03d\t%(levelname)s:\t%(message)s', 
+    datefmt='%Y-%m-%dT%I:%M:%S')
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI

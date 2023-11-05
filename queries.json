@@ -1,0 +1,40 @@
+{
+    "event_create": {
+        "mutation": [
+            "mutation(",
+                "$id: UUID!",
+                "$lastchange: DateTime!",
+                "$name: String!",
+            ") {",
+                "result: eventCreate(", 
+                    "event: {",
+                        "id: $id,",
+                        "name: $name,",
+                    "})",
+                ") {",
+                    "msg",
+                    "id",
+                    "entity: event {",
+                        "id",
+                        "name",
+                        "lastchange",
+                    "}",
+                "}",
+            "}"
+        ],
+        "variables": {
+            "id": "9bb5f1f0-cf9f-4444-a563-1e253e982f18",
+            "name": "new event"
+        }
+    },
+    "event_update": {
+        "mutation": [
+            "",
+            ""
+        ],
+        "variables": {
+            "id": "9bb5f1f0-cf9f-4444-a563-1e253e982f18",
+            "name": "new event C"
+        }
+    }
+}

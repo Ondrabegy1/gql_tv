@@ -25,20 +25,23 @@ def update(destination, source=None, extraValues={}):
 def createLoader(asyncSessionMaker, DBModel):
     baseStatement = select(DBModel)
     class Loader:
-        async def load(self, id):
+
+        async def execute_select(self, selectstmt):
             async with asyncSessionMaker() as session:
-                statement = baseStatement.filter_by(id=id)
-                rows = await session.execute(statement)
-                rows = rows.scalars()
-                row = next(rows, None)
-                return row
-        
-        async def filter_by(self, **kwargs):
-            async with asyncSessionMaker() as session:
-                statement = baseStatement.filter_by(**kwargs)
-                rows = await session.execute(statement)
+                rows = await session.execute(selectstmt)
                 rows = rows.scalars()
                 return rows
+
+        async def load(self, id):
+            statement = baseStatement.filter_by(id=id)
+            rows = self.execute_select(statement)
+            row = next(rows, None)
+            return row
+        
+        async def filter_by(self, **kwargs):
+            statement = baseStatement.filter_by(**kwargs)
+            rows = await self.execute_select(statement)
+            return rows
 
         async def insert(self, entity, extra={}):
             newdbrow = DBModel()
@@ -145,3 +148,86 @@ def getUserFromInfo(info):
                     context["user"] = result
     logging.debug("getUserFromInfo", result)
     return result
+
+
+def prepareSelect(model, where: dict):   
+    from sqlalchemy import select, and_, or_
+    baseStatement = select(model)
+
+    def limitDict(input):
+        result = {key: value for key, value in input.items() if value is not None}
+        return result
+    
+    def convertAnd(name, listExpr):
+        assert len(listExpr) > 0, "atleast one attribute in And expected"
+        results = [convertAny(w) for w in listExpr]
+        return and_(*results)
+
+    def convertOr(name, listExpr):
+        #print("enter convertOr", listExpr)
+        assert len(listExpr) > 0, "atleast one attribute in Or expected"
+        results = [convertAny(w) for w in listExpr]
+        return or_(*results)
+
+    def convertAttributeOp(name, op, value):
+        column = getattr(model, name)
+        assert column is not None, f"cannot map {name} to model {model.__tablename__}"
+        opMethod = getattr(column, op)
+        assert opMethod is not None, f"cannot map {op} to attribute {name} of model {model.__tablename__}"
+        return opMethod(value)
+
+    def convertAttribute(attributeName, where):
+        woNone = limitDict(where)
+        #print("convertAttribute", attributeName, woNone)
+        keys = list(woNone.keys())
+        assert len(keys) == 1, "convertAttribute: only one attribute in where expected"
+        opName = keys[0]
+        opValue = woNone[opName]
+
+        ops = {
+            "_eq": "__eq__",
+            "_lt": "__lt__",
+            "_le": "__le__",
+            "_gt": "__gt__",
+            "_ge": "__ge__",
+            "_in": "in_",
+            "_like": "like",
+            "_ilike": "ilike",
+            "_startswith": "startswith",
+            "_endswith": "endswith",
+        }
+        opName = ops[opName]
+        #print("op", attributeName, opName, opValue)
+        result = convertAttributeOp(attributeName, opName, opValue)
+        return result
+        
+    def convertAny(where):
+        
+        woNone = limitDict(where)
+        #print("convertAny", woNone, flush=True)
+        keys = list(woNone.keys())
+        #print(keys, flush=True)
+        #print(woNone, flush=True)
+        assert len(keys) == 1, "convertAny: only one attribute in where expected"
+        key = keys[0]
+        value = woNone[key]
+        
+        convertors = {
+            "_and": convertAnd,
+            "_or": convertOr
+        }
+        #print("calling", key, "convertor", value, flush=True)
+        #print("value is", value, flush=True)
+        convertor = convertors.get(key, convertAttribute)
+
+        result = convertor(key, value)
+        return result
+    
+    filterStatement = convertAny(where)
+    result = baseStatement.filter(filterStatement)
+    return result
+
+def EventSelectByWhere(where):
+    import strawberry
+    _where = strawberry.asdict(where)    
+    return prepareSelect(EventModel, _where)
