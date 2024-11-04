@@ -29,9 +29,9 @@ async def fill_disciplines(asyncSessionMaker):
     async with asyncSessionMaker() as session:
         async with session.begin():
             disciplines = [
-                {"name": "Biology", "nameEn": "Biology", "description": "Study of living organisms"},
-                {"name": "Chemistry", "nameEn": "Chemistry", "description": "Study of substances and their properties"},
-                # Add more disciplines here...
+                {"name": "Běh 4 x 10 m (s)", "nameEn": "DODĚLAT", "description": "Člunkový běh 4 x 10 metrů"},
+                {"name": "Běh 10 x 10 m (s)", "nameEn": "DODĚLAT", "description": "Člunkový běh 10 x 10 metrů"},
+                #{Zde přidejte další disciplíny};
             ]
             for discipline in disciplines:
                 session.add(DisciplineModel(**discipline))
@@ -41,8 +41,8 @@ async def fill_discipline_sets(asyncSessionMaker):
     async with asyncSessionMaker() as session:
         async with session.begin():
             discipline_sets = [
-                {"name": "Science", "nameEn": "Science Set", "description": "Set of science disciplines", "minimumPoints": 50},
-                # Add more discipline sets here...
+                {"name": "1. ročník ZS", "nameEn": "1. year ZS", "description": "Disciplíny pro zimní semestr 1. ročníku", "minimumPoints": 9},
+                #{Zde přidejte další soubory disciplín};
             ]
             for discipline_set in discipline_sets:
                 session.add(DisciplineSetModel(**discipline_set))
@@ -58,10 +58,10 @@ async def fill_result_templates(asyncSessionMaker):
                     "discipline_id": discipline_id, 
                     "discipline_set_id": discipline_set_id, 
                     "effective_date": datetime.datetime.now(), 
-                    "point_range": "0-100", 
+                    "point_range": "0-48", 
                     "point_type": "integer"
                 },
-                # Add more result templates here...
+                #{Zde přidejte další šablony výsledků};
             ]
             for result_template in result_templates:
                 session.add(ResultTemplateModel(**result_template))
@@ -76,10 +76,10 @@ async def fill_results(asyncSessionMaker):
                     "tested_person_id": "1", 
                     "examiner_person_id": "2", 
                     "datetime": datetime.datetime.now(), 
-                    "result": "85", 
-                    "note": "Good performance"
+                    "result": "9", 
+                    "note": "Vyhovující"
                 },
-                # Add more results here...
+                #{Zde přidejte další výsledky};
             ]
             for result in results:
                 session.add(ResultModel(**result))
@@ -95,12 +95,12 @@ async def fill_norms(asyncSessionMaker):
                     "effective_date": datetime.datetime.now(), 
                     "gender": "male", 
                     "age_minimal": 18, 
-                    "age_maximal": 30, 
-                    "result_minimal_value": 50, 
-                    "result_maximal_value": 100, 
+                    "age_maximal": 25, 
+                    "result_minimal_value": 9, 
+                    "result_maximal_value": 48, 
                     "points": 10
                 },
-                # Add more norms here...
+                #{Zde přidejte další normy};
             ]
             for norm in norms:
                 session.add(NormModel(**norm))
