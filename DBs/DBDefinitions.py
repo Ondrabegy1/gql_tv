@@ -1,23 +1,15 @@
-#FK = foreign key z jiné databáze
-
 import sqlalchemy
 import datetime
-
 from sqlalchemy import (
     Column,
     String,
-    BigInteger,
     Integer,
     DateTime,
     ForeignKey,
-    Sequence,
-    Table,
-    Boolean,
-    Uuid
+    Boolean
 )
 from sqlalchemy.dialects.postgresql import UUID
-
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 from sqlalchemy.ext.declarative import declarative_base
 import uuid
 
@@ -34,7 +26,7 @@ def UUIDColumn(name=None):
             name, String, primary_key=True, unique=True, default=newUuidAsString
         )
 
-def UUIDFKey(*, ForeignKey=None, nullable=False):
+def UUIDFKey(ForeignKey=None, nullable=False):
     if ForeignKey is None:
         return Column(
             String, index=True, nullable=nullable
@@ -49,71 +41,72 @@ class DisciplineModel(BaseModel):
    
     id = UUIDColumn()
     name = Column(String, comment="název disciplíny")
-    nameEn = Column(String, comment="název disciplíny v ENG")
-    description = Column(String, comment="popis disciplíny")
+    nameEn = Column(String, nullable=True, comment="název disciplíny v ENG")
+    description = Column(String, nullable=True, comment="popis disciplíny")
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
-    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="posledni změna")
+    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
     changedby = UUIDFKey(nullable=True)
 
-    resultTemplate = relationship("ResultTemplateModel", back_populates="discipline", comment="šablony výsledků")
+    resultTemplates = relationship("ResultTemplateModel", back_populates="discipline", comment="šablony výsledků")
 
 class DisciplineSetModel(BaseModel):
-    __tablename__ = "tv_discipline.set"
+    __tablename__ = "tv_discipline_set"
    
     id = UUIDColumn()
     name = Column(String, comment="název souboru disciplín")
-    nameEn = Column(String, comment="název souboru disciplín v ENG")
-    description = Column(String, comment="popis souboru disciplín")
-    minimumPoints = Column(String, comment="minimální počet bodů")
+    nameEn = Column(String, nullable=True, comment="název souboru disciplín v ENG")
+    description = Column(String, nullable=True, comment="popis souboru disciplín")
+    minimumPoints = Column(Integer, nullable=True, comment="minimální počet bodů")
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
-    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="poslední změna")
+    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
     changedby = UUIDFKey(nullable=True)
 
     resultTemplates = relationship("ResultTemplateModel", back_populates="disciplineSet", comment="šablony výsledků")
+    norms = relationship("NormModel", back_populates="disciplineSet", comment="normy")
 
 class ResultTemplateModel(BaseModel):
-    __tablename__ = "tv_result.template"
+    __tablename__ = "tv_result_template"
    
     id = UUIDColumn()
-    discipline_id = UUIDFKey(nullable=True, comment="id disciplíny")
-    discipline_set_id = UUIDFKey(nullable=True, comment="id souboru disciplín")
+    discipline_id = UUIDFKey(ForeignKey("tv_discipline.id"), comment="id disciplíny")
+    discipline_set_id = UUIDFKey(ForeignKey("tv_discipline_set.id"), comment="id souboru disciplín")
     effective_date = Column(DateTime, comment="datum účinnosti")
-    expiry_date = Column(DateTime, comment="datum zániku")
+    expiry_date = Column(DateTime, nullable=True, comment="datum zániku")
     point_range = Column(String, comment="rozsah bodů")
     point_type = Column(String, comment="typ bodů")
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
-    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="poslední změna")
+    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
     changedby = UUIDFKey(nullable=True)
 
-    discipline = relationship("DisciplineModel", back_populates="resultTemplate", comment="disciplína")
+    discipline = relationship("DisciplineModel", back_populates="resultTemplates", comment="disciplína")
     disciplineSet = relationship("DisciplineSetModel", back_populates="resultTemplates", comment="soubor disciplín")
 
 class ResultModel(BaseModel):
     __tablename__ = "tv_result"
 
     id = UUIDColumn()
-    tested_person_id = UUIDFKey(nullable=True, comment="id testované osoby")
-    examiner_person_id = UUIDFKey(nullable=True, comment="id zkoušející osoby")
-    #DSRelation_id = (nemám tušení co to je)
+    tested_person_id = UUIDFKey(comment="id testované osoby")
+    examiner_person_id = UUIDFKey(comment="id zkoušející osoby")
     datetime = Column(DateTime, comment="datum a čas výsledku")
     result = Column(String, comment="výsledek")
-    note = Column(String, comment="poznámka")
+    note = Column(String, nullable=True, comment="poznámka")
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
-    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="poslední změna")
+    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
     changedby = UUIDFKey(nullable=True)
 
-class NormModle(BaseModel):
+class NormModel(BaseModel):
     __tablename__ = "tv_norm"
 
     id = UUIDColumn()
-    #DSRelation_id = (nemám tušení co to je)
+    discipline_set_id = UUIDFKey(ForeignKey("tv_discipline_set.id"), comment="id souboru disciplín")
     effective_date = Column(DateTime, comment="datum účinnosti")
-    expiry_date = Column(DateTime, comment="datum zániku")
-    gender = Column(String, comment="pohlaví")
+    expiry_date = Column(DateTime, nullable=True, comment="datum zániku")
+    male = Column(Boolean, default=False, comment="muž")
+    female = Column(Boolean, default=False, comment="žena")
     age_minimal = Column(Integer, comment="minimální věk")
     age_maximal = Column(Integer, comment="maximální věk")
     result_minimal_value = Column(Integer, comment="minimální hodnota výsledku")
@@ -121,5 +114,15 @@ class NormModle(BaseModel):
     points = Column(Integer, comment="body")
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
-    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="poslední změna")
+    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
     changedby = UUIDFKey(nullable=True)
+
+    disciplineSet = relationship("DisciplineSetModel", back_populates="norms", comment="soubor disciplín")
+
+    @validates('male', 'female')
+    def validate_gender(self, key, value):
+        if key == 'male' and value:
+            assert not self.female, "nemůže být zároveň muž a žena"
+        if key == 'female' and value:
+            assert not self.male, "nemůže být zároveň muž a žena"
+        return value
