@@ -31,8 +31,8 @@ class GroupEditorPermission(BasePermission):
     message = "User is not authenticated"
 
     async def canEditGroup(session, group_id, user_id):
-        #stmt = select(RoleModel).filter_by(group_id=group_id, user_id=user_id)
-        #dbRecords = await session.execute(stmt).scalars()
+        stmt = select(RoleModel).filter_by(group_id=group_id, user_id=user_id)
+        dbRecords = await session.execute(stmt).scalars()
         dbRecords = [*dbRecords]  # konverze na list
         if len(dbRecords) > 0:
             return True
