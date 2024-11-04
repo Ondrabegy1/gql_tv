@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from strawberry.fastapi import GraphQLRouter
 
-from GraphTypeDefinitions import schema
+from GQLs import schema
 
 
 
@@ -13,7 +13,7 @@ appcontext = {}
 @asynccontextmanager
 async def initEngine(app: FastAPI):
 
-    from DBDefinitions import startEngine, ComposeConnectionString
+    from DBs import startEngine, ComposeConnectionString
 
     connectionstring = ComposeConnectionString()
 

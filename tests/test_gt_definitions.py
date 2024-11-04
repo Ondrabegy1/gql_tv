@@ -5,7 +5,7 @@ import asyncio
 
 import pytest
 
-from GraphTypeDefinitions import schema
+from GQLs import schema
 
 from .shared import (
     prepare_demodata,

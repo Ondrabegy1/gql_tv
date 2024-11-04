@@ -9,7 +9,7 @@ import pytest
 
 # from ..uoishelpers.uuid import UUIDColumn
 
-from DBDefinitions import BaseModel, EventModel
+from DBs import BaseModel, EventModel
 
 
 async def prepare_in_memory_sqllite():

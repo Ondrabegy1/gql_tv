@@ -1,6 +1,6 @@
 import logging
 from functools import cache
-from DBDefinitions import (
+from DBs import (
     EventModel, EventUserModel
     )
 from sqlalchemy.future import select

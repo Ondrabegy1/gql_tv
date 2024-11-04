@@ -3,7 +3,7 @@ import datetime
 from sqlalchemy import select
 from functools import cache
 
-from DBDefinitions import EventModel, EventUserModel
+from DBs import EventModel, EventUserModel
 
 def update(destination, source=None, extraValues={}):
     """Updates destination's attributes with source's attributes.

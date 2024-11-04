@@ -11,7 +11,7 @@ import pytest
 # from ..uoishelpers.uuid import UUIDColumn
 
 from .shared import prepare_demodata, prepare_in_memory_sqllite, get_demodata
-from DBDefinitions import BaseModel, EventModel
+from DBs import BaseModel, EventModel
 
 
 @pytest.mark.asyncio
@@ -24,7 +24,7 @@ async def test_load_demo_data():
     
 
 
-from DBDefinitions import ComposeConnectionString
+from DBs import ComposeConnectionString
 
 
 def test_connection_string():
@@ -34,7 +34,7 @@ def test_connection_string():
     assert "@" in connectionString
 
 
-from DBDefinitions import startEngine
+from DBs import startEngine
 
 
 @pytest.mark.asyncio
