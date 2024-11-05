@@ -7,8 +7,6 @@ from strawberry.fastapi import GraphQLRouter
 
 from GQLs import schema
 
-
-
 appcontext = {}
 @asynccontextmanager
 async def initEngine(app: FastAPI):

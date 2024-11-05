@@ -1,9 +1,18 @@
 fastapi[all]
 uvicorn[standard]
+gunicorn
 
 strawberry-graphql
 sqlalchemy
+sqlalchemy_utils
 asyncpg
 
 
 https://github.com/hrbolek/uoishelpers/archive/refs/heads/main.zip
+
+pytest
+pytest-cov
+pytest-asyncio
+aiosqlite
+gevent
+httpx
