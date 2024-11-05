@@ -46,7 +46,9 @@ class DisciplineModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True)
+    changedby_id = UUIDFKey(nullable=True, comment = "změnil")
+    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil")
+    rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
 
     resultTemplates = relationship("ResultTemplateModel", back_populates="discipline")
 
@@ -61,7 +63,9 @@ class DisciplineSetModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True)
+    changedby_id = UUIDFKey(nullable=True, comment = "změnil")
+    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil")
+    rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
 
     resultTemplates = relationship("ResultTemplateModel", back_populates="disciplineSet")
     norms = relationship("NormModel", back_populates="disciplineSet")
@@ -79,7 +83,9 @@ class ResultTemplateModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True)
+    changedby_id = UUIDFKey(nullable=True, comment = "změnil")
+    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil")
+    rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
 
     discipline = relationship("DisciplineModel", back_populates="resultTemplates")
     disciplineSet = relationship("DisciplineSetModel", back_populates="resultTemplates")
@@ -96,7 +102,9 @@ class ResultModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True)
+    changedby_id = UUIDFKey(nullable=True, comment = "změnil")
+    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil")
+    rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
 
 class NormModel(BaseModel):
     __tablename__ = "tv_norm"
@@ -115,7 +123,9 @@ class NormModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True)
+    changedby_id = UUIDFKey(nullable=True, comment = "změnil")
+    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil")
+    rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
 
     disciplineSet = relationship("DisciplineSetModel", back_populates="norms")
 
