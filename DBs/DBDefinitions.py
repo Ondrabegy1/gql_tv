@@ -11,10 +11,9 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from .baseDBModel import BaseModel
 from sqlalchemy.orm import relationship, validates
-from sqlalchemy.ext.declarative import declarative_base
 import uuid
 
-BaseModel = declarative_base()
+from .baseDBModel import BaseModel
 
 def newUuidAsString():
     return f"{uuid.uuid1()}"
@@ -27,14 +26,14 @@ def UUIDColumn(name=None):
             name, String, primary_key=True, unique=True, default=newUuidAsString
         )
 
-def UUIDFKey(ForeignKey=None, nullable=False):
+def UUIDFKey(ForeignKey=None, nullable=False, **kwargs):
     if ForeignKey is None:
         return Column(
-            String, index=True, nullable=nullable
+            String, index=True, nullable=nullable, **kwargs
         )
     else:
         return Column(
-            ForeignKey, index=True, nullable=nullable
+            ForeignKey, index=True, nullable=nullable, **kwargs
         )
 
 class DisciplineModel(BaseModel):
@@ -47,9 +46,9 @@ class DisciplineModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby = UUIDFKey(nullable=True)
+    changedby_id = UUIDFKey(nullable=True)
 
-    resultTemplates = relationship("ResultTemplateModel", back_populates="discipline", comment="šablony výsledků")
+    resultTemplates = relationship("ResultTemplateModel", back_populates="discipline")
 
 class DisciplineSetModel(BaseModel):
     __tablename__ = "tv_discipline_set"
@@ -62,10 +61,10 @@ class DisciplineSetModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby = UUIDFKey(nullable=True)
+    changedby_id = UUIDFKey(nullable=True)
 
-    resultTemplates = relationship("ResultTemplateModel", back_populates="disciplineSet", comment="šablony výsledků")
-    norms = relationship("NormModel", back_populates="disciplineSet", comment="normy")
+    resultTemplates = relationship("ResultTemplateModel", back_populates="disciplineSet")
+    norms = relationship("NormModel", back_populates="disciplineSet")
 
 class ResultTemplateModel(BaseModel):
     __tablename__ = "tv_result_template"
@@ -80,10 +79,10 @@ class ResultTemplateModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby = UUIDFKey(nullable=True)
+    changedby_id = UUIDFKey(nullable=True)
 
-    discipline = relationship("DisciplineModel", back_populates="resultTemplates", comment="disciplína")
-    disciplineSet = relationship("DisciplineSetModel", back_populates="resultTemplates", comment="soubor disciplín")
+    discipline = relationship("DisciplineModel", back_populates="resultTemplates")
+    disciplineSet = relationship("DisciplineSetModel", back_populates="resultTemplates")
 
 class ResultModel(BaseModel):
     __tablename__ = "tv_result"
@@ -97,7 +96,7 @@ class ResultModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby = UUIDFKey(nullable=True)
+    changedby_id = UUIDFKey(nullable=True)
 
 class NormModel(BaseModel):
     __tablename__ = "tv_norm"
@@ -116,9 +115,9 @@ class NormModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby = UUIDFKey(nullable=True)
+    changedby_id = UUIDFKey(nullable=True)
 
-    disciplineSet = relationship("DisciplineSetModel", back_populates="norms", comment="soubor disciplín")
+    disciplineSet = relationship("DisciplineSetModel", back_populates="norms")
 
     @validates('male', 'female')
     def validate_gender(self, key, value):
