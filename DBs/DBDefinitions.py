@@ -9,6 +9,7 @@ from sqlalchemy import (
     Boolean
 )
 from sqlalchemy.dialects.postgresql import UUID
+from .baseDBModel import BaseModel
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.ext.declarative import declarative_base
 import uuid

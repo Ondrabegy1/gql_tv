@@ -2,11 +2,22 @@ fastapi[all]
 uvicorn[standard]
 gunicorn
 
-strawberry-graphql
-sqlalchemy
-sqlalchemy_utils
 asyncpg
 
+sqlalchemy
+sqlalchemy_utils
+
+pydantic
+starlette
+strawberry-graphql
+click
+aiodataloader
+aiohttp
+pyjwt
+requests
+
+prometheus-client
+prometheus_fastapi_instrumentator
 
 https://github.com/hrbolek/uoishelpers/archive/refs/heads/main.zip
 
@@ -14,5 +25,4 @@ pytest
 pytest-cov
 pytest-asyncio
 aiosqlite
-gevent
-httpx
+https://github.com/hrbolek/PyMockOAuthServer/archive/refs/heads/main.zip
