@@ -13,8 +13,8 @@ from DBs.DBDefinitions import (
     NormModel
 )
 
+# Decorator to cache the result of a single async function call
 def singleCall(asyncFunc):
-
     resultCache = {}
 
     async def result():
@@ -24,33 +24,43 @@ def singleCall(asyncFunc):
 
     return result
 
+# Async function to fill the disciplines table with predefined data
 @singleCall
 async def fill_disciplines(asyncSessionMaker):
     async with asyncSessionMaker() as session:
         async with session.begin():
             disciplines = [
-                {"name": "Běh 4 x 10 m (s)", "nameEn": "DODĚLAT", "description": "Člunkový běh 4 x 10 metrů"},
-                {"name": "Běh 10 x 10 m (s)", "nameEn": "DODĚLAT", "description": "Člunkový běh 10 x 10 metrů"},
-                #{Zde přidejte další disciplíny};
+                {
+                    "name": "Běh 4 x 10 m (s)", "nameEn": "DODĚLAT", "description": "Člunkový běh 4 x 10 metrů"
+                },
+                {
+                    "name": "Běh 10 x 10 m (s)", "nameEn": "DODĚLAT", "description": "Člunkový běh 10 x 10 metrů"
+                },
+                # Add more disciplines here
             ]
             for discipline in disciplines:
                 session.add(DisciplineModel(**discipline))
 
+# Async function to fill the discipline sets table with predefined data
 @singleCall
 async def fill_discipline_sets(asyncSessionMaker):
     async with asyncSessionMaker() as session:
         async with session.begin():
             discipline_sets = [
-                {"name": "1. ročník ZS", "nameEn": "1. year ZS", "description": "Disciplíny pro zimní semestr 1. ročníku", "minimumPoints": 9},
-                #{Zde přidejte další soubory disciplín};
+                {
+                    "name": "1. ročník ZS", "nameEn": "1. year ZS", "description": "Disciplíny pro zimní semestr 1. ročníku", "minimumPoints": 9
+                },
+                # Add more discipline sets here
             ]
             for discipline_set in discipline_sets:
                 session.add(DisciplineSetModel(**discipline_set))
 
+# Async function to fill the result templates table with predefined data
 @singleCall
 async def fill_result_templates(asyncSessionMaker):
     async with asyncSessionMaker() as session:
         async with session.begin():
+            # Get discipline and discipline set IDs for the result templates
             discipline_id = await session.scalar(select(DisciplineModel.id).limit(1))
             discipline_set_id = await session.scalar(select(DisciplineSetModel.id).limit(1))
             result_templates = [
@@ -61,11 +71,12 @@ async def fill_result_templates(asyncSessionMaker):
                     "point_range": "0-48", 
                     "point_type": "integer"
                 },
-                #{Zde přidejte další šablony výsledků};
+                # Add more result templates here
             ]
             for result_template in result_templates:
                 session.add(ResultTemplateModel(**result_template))
 
+# Async function to fill the results table with predefined data
 @singleCall
 async def fill_results(asyncSessionMaker):
     async with asyncSessionMaker() as session:
@@ -79,11 +90,12 @@ async def fill_results(asyncSessionMaker):
                     "result": "9", 
                     "note": "Vyhovující"
                 },
-                #{Zde přidejte další výsledky};
+                # Add more results here
             ]
             for result in results:
                 session.add(ResultModel(**result))
 
+# Async function to fill the norms table with predefined data
 @singleCall
 async def fill_norms(asyncSessionMaker):
     async with asyncSessionMaker() as session:
@@ -100,11 +112,12 @@ async def fill_norms(asyncSessionMaker):
                     "result_maximal_value": 48, 
                     "points": 10
                 },
-                #{Zde přidejte další normy};
+                # Add more norms here
             ]
             for norm in norms:
                 session.add(NormModel(**norm))
 
+# Function to load demo data from a JSON file
 def get_demodata():
     def datetime_parser(json_dict):
         for (key, value) in json_dict.items():
@@ -121,13 +134,14 @@ def get_demodata():
                 json_dict[key] = dateValueWOtzinfo
         return json_dict
 
+    # Load data from 'systemdata.json' and parse datetime fields
     with open("./systemdata.json", "r") as f:
         jsonData = json.load(f, object_hook=datetime_parser)
 
     return jsonData
 
+# Async function to initialize the database with demo data or predefined models
 async def initDB(asyncSessionMaker):
-
     defaultNoDemo = "False"
     if defaultNoDemo == os.environ.get("DEMO", defaultNoDemo):
         dbModels = [

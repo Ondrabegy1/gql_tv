@@ -13,11 +13,11 @@ from .baseDBModel import BaseModel
 from sqlalchemy.orm import relationship, validates
 import uuid
 
-from .baseDBModel import BaseModel
-
+# Helper function to generate a new UUID as a string
 def newUuidAsString():
     return f"{uuid.uuid1()}"
 
+# Function to create a UUID column with optional name
 def UUIDColumn(name=None):
     if name is None:
         return Column(String, primary_key=True, unique=True, default=newUuidAsString)
@@ -26,6 +26,7 @@ def UUIDColumn(name=None):
             name, String, primary_key=True, unique=True, default=newUuidAsString
         )
 
+# Function to create a foreign key column with UUID type
 def UUIDFKey(ForeignKey=None, nullable=False, **kwargs):
     if ForeignKey is None:
         return Column(
@@ -36,6 +37,7 @@ def UUIDFKey(ForeignKey=None, nullable=False, **kwargs):
             ForeignKey, index=True, nullable=nullable, **kwargs
         )
 
+# Discipline model
 class DisciplineModel(BaseModel):
     __tablename__ = "tv_discipline"
    
@@ -46,12 +48,13 @@ class DisciplineModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True, comment = "změnil")
-    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil")
+    changedby_id = UUIDFKey(nullable=True, comment = "změnil/a")
+    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil/a")
     rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
 
     resultTemplates = relationship("ResultTemplateModel", back_populates="discipline")
 
+# Discipline set model
 class DisciplineSetModel(BaseModel):
     __tablename__ = "tv_discipline_set"
    
@@ -63,13 +66,14 @@ class DisciplineSetModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True, comment = "změnil")
-    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil")
+    changedby_id = UUIDFKey(nullable=True, comment = "změnil/a")
+    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil/a")
     rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
 
     resultTemplates = relationship("ResultTemplateModel", back_populates="disciplineSet")
     norms = relationship("NormModel", back_populates="disciplineSet")
 
+# Result template model
 class ResultTemplateModel(BaseModel):
     __tablename__ = "tv_result_template"
    
@@ -83,13 +87,14 @@ class ResultTemplateModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True, comment = "změnil")
-    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil")
+    changedby_id = UUIDFKey(nullable=True, comment = "změnil/a")
+    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil/a")
     rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
 
     discipline = relationship("DisciplineModel", back_populates="resultTemplates")
     disciplineSet = relationship("DisciplineSetModel", back_populates="resultTemplates")
 
+# Result model
 class ResultModel(BaseModel):
     __tablename__ = "tv_result"
 
@@ -102,10 +107,11 @@ class ResultModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True, comment = "změnil")
-    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil")
+    changedby_id = UUIDFKey(nullable=True, comment = "změnil/a")
+    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil/a")
     rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
 
+# Norm model
 class NormModel(BaseModel):
     __tablename__ = "tv_norm"
 
@@ -123,8 +129,8 @@ class NormModel(BaseModel):
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True, comment = "změnil")
-    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil")
+    changedby_id = UUIDFKey(nullable=True, comment = "změnil/a")
+    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil/a")
     rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
 
     disciplineSet = relationship("DisciplineSetModel", back_populates="norms")
