@@ -2,8 +2,6 @@ from sqlalchemy.future import select
 import strawberry
 
 from DBs.baseDBModel import BaseModel
-from DBs.DBDefinitions import GroupTypeModel, RoleTypeModel
-
 
 def AsyncSessionFromInfo(info):
     # Retrieves the asynchronous session from the GraphQL context

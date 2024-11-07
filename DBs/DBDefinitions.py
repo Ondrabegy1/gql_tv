@@ -46,12 +46,6 @@ class DisciplineModel(BaseModel):
     nameEn = Column(String, nullable=True, comment="název disciplíny v ENG")
     description = Column(String, nullable=True, comment="popis disciplíny")
 
-    created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
-    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True, comment = "změnil/a")
-    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil/a")
-    rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
-
     resultTemplates = relationship("ResultTemplateModel", back_populates="discipline")
 
 # Discipline set model
@@ -63,12 +57,6 @@ class DisciplineSetModel(BaseModel):
     nameEn = Column(String, nullable=True, comment="název souboru disciplín v ENG")
     description = Column(String, nullable=True, comment="popis souboru disciplín")
     minimumPoints = Column(Integer, nullable=True, comment="minimální počet bodů")
-
-    created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
-    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True, comment = "změnil/a")
-    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil/a")
-    rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
 
     resultTemplates = relationship("ResultTemplateModel", back_populates="disciplineSet")
     norms = relationship("NormModel", back_populates="disciplineSet")
@@ -85,12 +73,6 @@ class ResultTemplateModel(BaseModel):
     point_range = Column(String, comment="rozsah bodů")
     point_type = Column(String, comment="typ bodů")
 
-    created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
-    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True, comment = "změnil/a")
-    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil/a")
-    rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
-
     discipline = relationship("DisciplineModel", back_populates="resultTemplates")
     disciplineSet = relationship("DisciplineSetModel", back_populates="resultTemplates")
 
@@ -104,12 +86,6 @@ class ResultModel(BaseModel):
     datetime = Column(DateTime, comment="datum a čas výsledku")
     result = Column(String, comment="výsledek")
     note = Column(String, nullable=True, comment="poznámka")
-
-    created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
-    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True, comment = "změnil/a")
-    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil/a")
-    rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
 
 # Norm model
 class NormModel(BaseModel):
@@ -127,14 +103,9 @@ class NormModel(BaseModel):
     result_maximal_value = Column(Integer, comment="maximální hodnota výsledku")
     points = Column(Integer, comment="body")
 
-    created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="tvorba záznamu")
-    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), onupdate=sqlalchemy.sql.func.now(), comment="poslední změna")
-    changedby_id = UUIDFKey(nullable=True, comment = "změnil/a")
-    createdby_id = UUIDFKey(nullable=True, comment = "vytvořil/a")
-    rbacobject_id = UUIDFKey(nullable=True, comment = "RBAC objekt")
-
     disciplineSet = relationship("DisciplineSetModel", back_populates="norms")
 
+    # Validation of gender by allowing only one gender to be true
     @validates('male', 'female')
     def validate_gender(self, key, value):
         if key == 'male' and value:

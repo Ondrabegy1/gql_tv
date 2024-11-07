@@ -7,8 +7,6 @@ from .DBDefinitions import DisciplineModel
 
 # Performs necessary operations and returns an asynchronous SessionMaker.
 
-# Returns: async_sessionMaker (sessionmaker): Asynchronous session maker.
-
 async def startEngine(connectionstring, makeDrop=False, makeUp=True):
     
     # Create an asynchronous engine for database connection
