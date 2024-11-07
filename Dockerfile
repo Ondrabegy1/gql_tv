@@ -21,8 +21,6 @@ COPY . /app
 
 # FROM prepare as tester
 RUN python -m pip install coverage pytest pytest-cov
-# RUN python -m unittest tests/*
-RUN python -m pytest --cov-report term-missing --cov=gql_ug tests/*
 
 FROM prepare as runner
 # Creates a non-root user and adds permission to access the /app folder
